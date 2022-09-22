@@ -3,13 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@shopify/polaris": "^10.0.0",
     "@testing-library/jest-dom": "^5.16.4",
     "@testing-library/react": "^13.3.0",
     "@testing-library/user-event": "^13.5.0",
+    "formik": "^2.2.9",
+    "lodash": "^4.17.21",
+    "lodash.debounce": "^4.0.8",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-leave-page-confirm": "^0.0.6",
+    "react-router-dom": "^6.3.0",
     "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
+    "sweetalert": "^2.1.2",
+    "web-vitals": "^2.1.4",
+    "yup": "^0.32.11"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -34,5 +42,20 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@babel/core": "^7.15.5",
+    "@babel/eslint-parser": "^7.15.7",
+    "eslint": "^7.32.0",
+    "eslint-config-airbnb": "^18.2.1",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-config-react-app": "^6.0.0",
+    "eslint-plugin-flowtype": "^6.0.1",
+    "eslint-plugin-import": "^2.24.2",
+    "eslint-plugin-jsx-a11y": "^6.4.1",
+    "eslint-plugin-prettier": "^4.0.0",
+    "eslint-plugin-react": "^7.25.2",
+    "eslint-plugin-react-hooks": "^4.2.0",
+    "prettier": "^2.4.1"
   }
 }
