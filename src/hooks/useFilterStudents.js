@@ -42,13 +42,13 @@ export const useFilterStudents = () => {
     return () => clearTimeout(timeOutId);
   }, [queryValue, students, addQueryParams, removeQueryParams]);
 
-  // useEffect(() => {
-  //   setIsFiltering(true);
-  //   const timeOutId = setTimeout(() => {
-  //     setIsFiltering(false);
-  //   }, 500);
-  //   return () => clearTimeout(timeOutId);
-  // }, [filteredStudents]);
+  useEffect(() => {
+    setIsFiltering(true);
+    const timeOutId = setTimeout(() => {
+      setIsFiltering(false);
+    }, 600);
+    return () => clearTimeout(timeOutId);
+  }, [filteredStudents]);
 
   return { filteredStudents, isFiltering, queryValue, isFetching, setQueryValue };
 };
