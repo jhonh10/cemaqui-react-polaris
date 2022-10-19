@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Page,
   Card,
@@ -54,7 +53,7 @@ export default function EditStudent() {
                 </Stack.Item>
                 <Button plain>Editar</Button>
               </Stack>
-              <TextStyle variation="subdued">No hay notas sobre este alumno</TextStyle>
+              <TextStyle variation="subdued">No hay notas sobre este alumno.</TextStyle>
             </Stack>
           </Card>
           <Card>
