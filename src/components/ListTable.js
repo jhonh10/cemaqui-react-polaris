@@ -79,7 +79,7 @@ const ListTable = () => {
   ];
 
   const rowMarkup = filteredStudents.map(
-    ({ id, name, lastname, documentId, resolution, createdAt }, index) => (
+    ({ id, firstname, lastname, documentId, resolution, createdAt }, index) => (
       <IndexTable.Row
         id={id}
         key={id}
@@ -89,7 +89,7 @@ const ListTable = () => {
       >
         <IndexTable.Cell>
           <TextStyle variation="strong">
-            {name} {lastname}
+            {firstname} {lastname}
           </TextStyle>
         </IndexTable.Cell>
         <IndexTable.Cell>{documentId}</IndexTable.Cell>
@@ -132,7 +132,7 @@ const ListTable = () => {
         hasMoreItems
         promotedBulkActions={promotedBulkActions}
         lastColumnSticky
-        loading={isFetching || isFiltering}
+        loading={isFiltering}
         headings={[
           { title: 'Nombre' },
           { title: 'Numero de Cedula' },

@@ -13,6 +13,7 @@ import {
 } from '@shopify/polaris';
 import ModalConfirm from '../components/ModalConfirm';
 import { useCallbackPrompt } from '../hooks/useCallBackPropmt';
+import { addStudent } from '../firebase/client';
 
 export default function NewStudent() {
   const isDirty = true;
@@ -82,12 +83,10 @@ export default function NewStudent() {
     phone: Yup.string().matches(/^[0-9]+$/, 'Ingrese un numero de telefono valido'),
     notes: Yup.string().max(50, 'Ingrese una nota maximo de 50 caracteres')
   });
-  const onSubmit = () => {
+  const onSubmit = async () => {
     try {
-      console.log('submitting...');
-      setTimeout(() => {
-        handleReset();
-      }, 1000);
+      await addStudent(values);
+      handleReset();
     } catch (error) {
       console.log(error);
     }

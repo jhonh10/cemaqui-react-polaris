@@ -18,6 +18,7 @@ export const useFilterStudents = () => {
         array,
         (_user) =>
           _user.name.toLowerCase().includes(query.toLowerCase()) ||
+          _user.lastname.toLowerCase().includes(query.toLowerCase()) ||
           _user.documentId.toString().toLowerCase().includes(query.toLowerCase())
       );
     }
@@ -35,9 +36,14 @@ export const useFilterStudents = () => {
 
   useEffect(() => {
     const timeOutId = setTimeout(() => {
-      if (queryValue) addQueryParams();
-      if (!queryValue) removeQueryParams();
-      setFilteredStudents(applySortFilter(students, queryValue));
+      if (queryValue) {
+        addQueryParams();
+        setFilteredStudents(applySortFilter(students, queryValue));
+      }
+      if (!queryValue) {
+        removeQueryParams();
+        setFilteredStudents(students || []);
+      }
     }, 300);
     return () => clearTimeout(timeOutId);
   }, [queryValue, students, addQueryParams, removeQueryParams]);
