@@ -17,7 +17,7 @@ export const useFilterStudents = () => {
       return filter(
         array,
         (_user) =>
-          _user.name.toLowerCase().includes(query.toLowerCase()) ||
+          _user.firstname.toLowerCase().includes(query.toLowerCase()) ||
           _user.lastname.toLowerCase().includes(query.toLowerCase()) ||
           _user.documentId.toString().toLowerCase().includes(query.toLowerCase())
       );
