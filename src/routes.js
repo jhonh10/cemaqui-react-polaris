@@ -15,7 +15,7 @@ export default function App() {
           <Route path="/admin" element={<PageLayout />}>
             <Route index element={<Home />} />
             <Route path="students" element={<Students />} />
-            <Route path="students/:userId" element={<EditStudent />} />
+            <Route path="students/:studentId" element={<EditStudent />} />
             <Route path="students/new" element={<NewStudent />} />
           </Route>
         </Routes>
