@@ -1,6 +1,14 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, doc, setDoc, Timestamp } from 'firebase/firestore';
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  doc,
+  setDoc,
+  Timestamp,
+  getDoc
+} from 'firebase/firestore';
 
 const firebaseConfig = JSON.parse(process.env.REACT_APP_FIREBASE_CONFIG);
 
@@ -26,6 +34,17 @@ export async function getStudents() {
   const studentSnapShot = await getDocs(studentsColl);
   const studentList = studentSnapShot.docs.map(mapStudentFromFirebase);
   return studentList;
+}
+
+export async function getStudentById(studentId) {
+  const docRef = doc(db, 'Alumnos', `${studentId}`);
+  const docSnap = await getDoc(docRef);
+
+  if (docSnap.exists()) {
+    const student = mapStudentFromFirebase(docSnap);
+    return student;
+  }
+  return console.log('No data');
 }
 
 export async function addStudent(values) {
