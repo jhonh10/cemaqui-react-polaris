@@ -1,5 +1,6 @@
 import { ContextualSaveBar, Frame, Loading, Navigation, Toast } from '@shopify/polaris';
 import { HomeMinor, CustomersMinor } from '@shopify/polaris-icons';
+import { useIsFetching } from '@tanstack/react-query';
 import { useState, useCallback, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import TopBarDefault from '../components/TopBarDefault';
@@ -9,27 +10,33 @@ export default function PageLayout() {
     emailFieldValue: 'dharma@jadedpixel.com',
     nameFieldValue: 'Cemaqui'
   });
-  const toggleIsLoading = useCallback(() => setIsLoading((isLoading) => !isLoading), []);
   const skipToContentRef = useRef(null);
   const { pathname } = useLocation();
 
   const [toastActive, setToastActive] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [toastValue, setToatsValue] = useState('');
+  const isFetching = useIsFetching();
   const [isDirty, setIsDirty] = useState(false);
   const [mobileNavigationActive, setMobileNavigationActive] = useState(false);
   const [storeName, setStoreName] = useState(defaultState.current.nameFieldValue);
 
-  const handleDiscard = useCallback(() => {
-    setIsDirty(false);
-  }, []);
+  const handleDiscard = useCallback(() => setIsDirty(false), []);
+  const toggleToastActive = useCallback(() => setToastActive((toastActive) => !toastActive), []);
+  // Refactor - Aplicar principios solid
+  const handleToast = useCallback(
+    (message) => {
+      setToatsValue(message);
+      toggleToastActive();
+    },
+    [toggleToastActive]
+  );
 
+  //Refactor - Aplicar principios solid
   const handleSave = useCallback(() => {
     setIsDirty(false);
     setToastActive(true);
     setStoreName(defaultState.current.nameFieldValue);
   }, []);
-
-  const toggleToastActive = useCallback(() => setToastActive((toastActive) => !toastActive), []);
 
   const toggleMobileNavigationActive = useCallback(
     () => setMobileNavigationActive((mobileNavigationActive) => !mobileNavigationActive),
@@ -51,7 +58,7 @@ export default function PageLayout() {
   );
 
   const toastMarkup = toastActive ? (
-    <Toast onDismiss={toggleToastActive} content="Changes saved" />
+    <Toast onDismiss={toggleToastActive} content={toastValue} />
   ) : null;
 
   const contextualSaveBarMarkup = isDirty ? (
@@ -74,26 +81,34 @@ export default function PageLayout() {
             url: '/admin',
             label: 'Inicio',
             icon: HomeMinor,
-            exactMatch: true,
-            onClick: toggleIsLoading
+            exactMatch: true
           },
           {
             url: '/admin/students',
             label: 'Alumnos',
             icon: CustomersMinor,
-            badge: '15',
-            onClick: toggleIsLoading
+            badge: '15'
           }
         ]}
       />
     </Navigation>
   );
 
-  const loadingMarkup = isLoading ? <Loading /> : null;
+  const loadingMarkup = isFetching ? <Loading /> : null;
 
   const skipToContentTarget = <a id="SkipToContentTarget" ref={skipToContentRef} tabIndex={-1} />;
 
-  const pageMarkup = <Outlet context={{ isDirty, setIsDirty, isLoading, skipToContentTarget }} />;
+  const pageMarkup = (
+    <Outlet
+      context={{
+        isDirty,
+        isFetching,
+        skipToContentTarget,
+        setIsDirty,
+        handleToast
+      }}
+    />
+  );
 
   return (
     <div style={{ height: '500px' }}>
