@@ -99,7 +99,7 @@ const ListTable = () => {
     )
   );
 
-  return (
+  const table = (
     <Card>
       <div style={{ padding: '16px', display: 'flex' }}>
         <div style={{ flex: 1 }}>
@@ -144,6 +144,12 @@ const ListTable = () => {
       </IndexTable>
     </Card>
   );
+
+  const loadingTable = <div>Cargando...</div>;
+
+  const tableMarkUp = isFetching ? loadingTable : table;
+
+  return tableMarkUp;
 
   function disambiguateLabel(key, value) {
     switch (key) {
