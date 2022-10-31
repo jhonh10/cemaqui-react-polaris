@@ -10,7 +10,7 @@ import {
 import { useOutletContext } from 'react-router-dom';
 
 export default function Home() {
-  const { isLoading } = useOutletContext();
+  const { isFetching } = useOutletContext();
   const actualPageMarkup = (
     <Page title="Inicio" fullWidth>
       <Layout>
@@ -37,7 +37,7 @@ export default function Home() {
     </SkeletonPage>
   );
 
-  const pageMarkup = isLoading ? loadingPageMarkup : actualPageMarkup;
+  const pageMarkup = isFetching ? loadingPageMarkup : actualPageMarkup;
 
   return pageMarkup;
 }
