@@ -11,14 +11,30 @@ import {
   List,
   Subheading,
   TextContainer,
-  PageActions
+  PageActions,
+  TextField
 } from '@shopify/polaris';
+import { useParams } from 'react-router-dom';
+import { useFetchStudentById } from '../hooks/useFetchStudentById';
 
 export default function EditStudent() {
+  const { studentId } = useParams();
+  const { studentData, isLoading } = useFetchStudentById(studentId);
+  if (isLoading) return <div>Cargando....</div>;
+  const { firstname, lastname, course, documentId, notes, email, createdAt } = studentData;
+
+  const studentNotes = notes ? (
+    <Text>{notes}</Text>
+  ) : (
+    <TextStyle variation="subdued">No hay notas sobre este alumno</TextStyle>
+  );
+  const studentEmail = email || 'No se ingreso un correo electronico';
+
+  console.log(studentData);
   return (
     <Page
       breadcrumbs={[{ content: 'Alumnos', url: '/admin/students' }]}
-      title="Jhon Palacios Arroyave"
+      title={`${firstname} ${lastname}`}
       pagination={{
         hasPrevious: true,
         hasNext: true
@@ -35,8 +51,8 @@ export default function EditStudent() {
               <Stack vertical spacing="tight">
                 <Stack spacing="tight" distribution="equalSpacing">
                   <Stack.Item fill>
-                    <List.Item>Retroexcavadora</List.Item>
-                    <TextStyle variation="subdued">El 15 de septimbre de 2022</TextStyle>
+                    <List.Item>{course}</List.Item>
+                    <TextStyle variation="subdued">{`El ${createdAt}`}</TextStyle>
                   </Stack.Item>
                   <Badge status="success">Vigente</Badge>
                 </Stack>
@@ -53,7 +69,7 @@ export default function EditStudent() {
                 </Stack.Item>
                 <Button plain>Editar</Button>
               </Stack>
-              <TextStyle variation="subdued">No hay notas sobre este alumno.</TextStyle>
+              {studentNotes}
             </Stack>
           </Card>
           <Card>
@@ -69,7 +85,7 @@ export default function EditStudent() {
                   <TextContainer>
                     <Stack vertical>
                       <Stack vertical>
-                        <Text>1013645826</Text>
+                        <Text>{documentId}</Text>
                       </Stack>
                     </Stack>
                   </TextContainer>
@@ -80,7 +96,7 @@ export default function EditStudent() {
               <Stack vertical>
                 <Stack>
                   <Stack.Item fill>
-                    <Subheading>Alumno</Subheading>
+                    <Subheading>Informacion de contácto</Subheading>
                   </Stack.Item>
                   <Button plain>Editar</Button>
                 </Stack>
@@ -88,7 +104,7 @@ export default function EditStudent() {
                   <TextContainer spacing="tight">
                     <Stack vertical>
                       <Stack vertical spacing="tight">
-                        <Text>jhonhpalacios09@gmail.com</Text>
+                        <Text>{studentEmail}</Text>
                         <Text>+57 320 2055666</Text>
                       </Stack>
                     </Stack>
