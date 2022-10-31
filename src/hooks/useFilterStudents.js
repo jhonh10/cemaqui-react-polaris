@@ -6,12 +6,12 @@ import { useFetchStudents } from './useFetchStudents';
 export const useFilterStudents = () => {
   const { students, isFetching } = useFetchStudents();
   const [filteredStudents, setFilteredStudents] = useState(students || []);
-  const [isFiltering, setIsFiltering] = useState(false);
+  const [isFiltering, setIsFiltering] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('query');
   const [queryValue, setQueryValue] = useState(query || '');
 
-  const applySortFilter = (array = [], query) => {
+  const applySortFilter = (array, query) => {
     const stabilizedThis = array.map((el, index) => [el, index]);
     if (query) {
       return filter(
@@ -37,6 +37,7 @@ export const useFilterStudents = () => {
   useEffect(() => {
     const timeOutId = setTimeout(() => {
       if (queryValue) {
+        setIsFiltering(true);
         addQueryParams();
         setFilteredStudents(applySortFilter(students, queryValue));
       }
@@ -44,12 +45,11 @@ export const useFilterStudents = () => {
         removeQueryParams();
         setFilteredStudents(students || []);
       }
-    }, 300);
+    }, 600);
     return () => clearTimeout(timeOutId);
   }, [queryValue, students, addQueryParams, removeQueryParams]);
 
   useEffect(() => {
-    setIsFiltering(true);
     const timeOutId = setTimeout(() => {
       setIsFiltering(false);
     }, 600);
