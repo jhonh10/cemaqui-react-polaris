@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import * as Yup from 'yup';
 import { Form, FormikProvider, useFormik } from 'formik';
 import {
@@ -16,8 +18,10 @@ import { useCallbackPrompt } from '../hooks/useCallBackPropmt';
 import { addStudent } from '../firebase/client';
 
 export default function NewStudent() {
-  const isDirty = true;
+  const [isDirty, setIsDirty] = useState(true);
   const [showPrompt, confirmNavigation, cancelNavigation] = useCallbackPrompt(isDirty);
+  const { handleToast } = useOutletContext();
+  const navigate = useNavigate();
 
   const courses = [
     {
@@ -60,7 +64,8 @@ export default function NewStudent() {
     resolution: '',
     company: '',
     adress: '',
-    phone: ''
+    phone: '',
+    email: ''
   };
 
   const registerSchema = Yup.object().shape({
@@ -81,14 +86,24 @@ export default function NewStudent() {
     company: Yup.string(),
     adress: Yup.string(),
     phone: Yup.string().matches(/^[0-9]+$/, 'Ingrese un numero de telefono valido'),
+    email: Yup.string().email('No parece un email valido'),
     notes: Yup.string().max(50, 'Ingrese una nota maximo de 50 caracteres')
   });
+
+  async function navigateAfterTwoSeconds(url) {
+    const timeOut = setTimeout(() => {
+      navigate(url);
+    }, 200);
+    return () => clearTimeout(timeOut);
+  }
   const onSubmit = async () => {
     try {
       await addStudent(values);
-      handleReset();
+      setIsDirty(false);
+      await navigateAfterTwoSeconds(`/admin/students/${values.documentId}`);
+      handleToast('Alumno creado con exito');
     } catch (error) {
-      console.log(error);
+      handleToast(error);
     }
   };
 
@@ -99,9 +114,9 @@ export default function NewStudent() {
     validateOnBlur: false,
     onSubmit
   });
-  const { errors, values, isSubmitting, handleSubmit, setFieldValue, handleReset } = formik;
+  const { errors, values, isSubmitting, handleSubmit, setFieldValue } = formik;
 
-  const contextualSaveBar = isDirty ? (
+  const contextualSaveBar = isDirty && (
     <ContextualSaveBar
       message="Cambios sin guardar"
       saveAction={{
@@ -112,7 +127,7 @@ export default function NewStudent() {
         onAction: () => {}
       }}
     />
-  ) : null;
+  );
 
   const modalPrompt = showPrompt && (
     <ModalConfirm
@@ -210,6 +225,12 @@ export default function NewStudent() {
                       placeholder="Dirección"
                       onChange={(value) => setFieldValue('adress', value)}
                       value={values.adress}
+                    />
+                    <TextField
+                      label="Email"
+                      placeholder="Email"
+                      onChange={(value) => setFieldValue('email', value)}
+                      value={values.email}
                     />
 
                     <TextField
