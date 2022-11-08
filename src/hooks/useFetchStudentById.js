@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getStudentById } from '../firebase/client';
 
 export const useFetchStudentById = (studentById) => {
-  const { data, isLoading } = useQuery(
+  const { data, isLoading, refetch } = useQuery(
     ['studentById', studentById],
     () => getStudentById(studentById),
     {
@@ -11,5 +11,5 @@ export const useFetchStudentById = (studentById) => {
     }
   );
 
-  return { studentData: data, isLoading };
+  return { studentData: data, isLoading, refetch };
 };
