@@ -6,5 +6,5 @@ export const useFetchStudents = () => {
     cacheTime: Infinity,
     refetchOnWindowFocus: false
   });
-  return { students: data, isFetching: isLoading };
+  return { students: data, isLoading };
 };
