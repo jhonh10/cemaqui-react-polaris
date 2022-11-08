@@ -1,21 +1,21 @@
 import { AppProvider } from '@shopify/polaris';
 import translations from '@shopify/polaris/locales/es.json';
 import { BrowserRouter, Routes, Route, Link as ReactRouterLink } from 'react-router-dom';
-import PageLayout from './layout/PageLayout';
-import EditStudent from './pages/editStudent';
+import StudentFlag from './pages/studentFlag';
 import Home from './pages/home';
 import NewStudent from './pages/newStudent';
-import Students from './pages/students';
+import AllStudentsFlag from './pages/allStudentsFlag';
+import LayoutPage from './layout/layoutPage';
 
 export default function App() {
   return (
     <BrowserRouter>
       <AppProvider linkComponent={Link} i18n={translations}>
         <Routes>
-          <Route path="/admin" element={<PageLayout />}>
+          <Route path="/admin" element={<LayoutPage />}>
             <Route index element={<Home />} />
-            <Route path="students" element={<Students />} />
-            <Route path="students/:studentId" element={<EditStudent />} />
+            <Route path="students" element={<AllStudentsFlag />} />
+            <Route path="students/:studentId" element={<StudentFlag />} />
             <Route path="students/new" element={<NewStudent />} />
           </Route>
         </Routes>
