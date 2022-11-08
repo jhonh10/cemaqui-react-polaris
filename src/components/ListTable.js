@@ -11,14 +11,15 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFilterStudents } from '../hooks/useFilterStudents';
 
-const ListTable = () => {
+const ListTable = ({ students }) => {
   const resourceName = {
     singular: 'alumno',
     plural: 'alumnos'
   };
 
-  const { filteredStudents, isFiltering, queryValue, isFetching, setQueryValue } =
-    useFilterStudents();
+  const { filteredStudents, isFiltering, queryValue, setQueryValue } = useFilterStudents({
+    students
+  });
   const { selectedResources, allResourcesSelected, handleSelectionChange } =
     useIndexResourceState(filteredStudents);
   const navigate = useNavigate();
@@ -145,11 +146,7 @@ const ListTable = () => {
     </Card>
   );
 
-  const loadingTable = <div>Cargando...</div>;
-
-  const tableMarkUp = isFetching ? loadingTable : table;
-
-  return tableMarkUp;
+  return table;
 
   function disambiguateLabel(key, value) {
     switch (key) {
