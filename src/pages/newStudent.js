@@ -101,7 +101,7 @@ export default function NewStudent() {
       await addStudent(values);
       setIsDirty(false);
       await navigateAfterTwoSeconds(`/admin/students/${values.documentId}`);
-      handleToast('Alumno creado con exito');
+      handleToast('Alumno creado');
     } catch (error) {
       handleToast(error);
     }
@@ -131,9 +131,13 @@ export default function NewStudent() {
 
   const modalPrompt = showPrompt && (
     <ModalConfirm
-      showDialog={showPrompt}
-      confirmNavigation={confirmNavigation}
-      cancelNavigation={cancelNavigation}
+      open={showPrompt}
+      confirmAction={confirmNavigation}
+      cancelAction={cancelNavigation}
+      title="¿Salir de la página sin guardar los cambios?"
+      primaryActionTitle="Abandonar pagina"
+      secondaryActionTitle="Permanecer"
+      bodyText="Al salir de esta página, se eliminarán todos los cambios sin guardar."
     />
   );
 
