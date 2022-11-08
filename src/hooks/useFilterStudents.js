@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { filter } from 'lodash';
 import { useSearchParams } from 'react-router-dom';
-import { useFetchStudents } from './useFetchStudents';
 
-export const useFilterStudents = () => {
-  const { students, isFetching } = useFetchStudents();
-  const [filteredStudents, setFilteredStudents] = useState(students || []);
-  const [isFiltering, setIsFiltering] = useState(true);
+export const useFilterStudents = ({ students }) => {
+  const [filteredStudents, setFilteredStudents] = useState(students);
+  const [isFiltering, setIsFiltering] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('query');
   const [queryValue, setQueryValue] = useState(query || '');
@@ -37,24 +35,29 @@ export const useFilterStudents = () => {
   useEffect(() => {
     const timeOutId = setTimeout(() => {
       if (queryValue) {
-        setIsFiltering(true);
         addQueryParams();
         setFilteredStudents(applySortFilter(students, queryValue));
       }
       if (!queryValue) {
         removeQueryParams();
-        setFilteredStudents(students || []);
+        setFilteredStudents(students);
       }
-    }, 600);
+    }, 500);
     return () => clearTimeout(timeOutId);
   }, [queryValue, students, addQueryParams, removeQueryParams]);
 
   useEffect(() => {
+    setIsFiltering(true);
     const timeOutId = setTimeout(() => {
       setIsFiltering(false);
-    }, 600);
+    }, 1000);
     return () => clearTimeout(timeOutId);
   }, [filteredStudents]);
 
-  return { filteredStudents, isFiltering, queryValue, isFetching, setQueryValue };
+  return {
+    filteredStudents,
+    isFiltering,
+    queryValue,
+    setQueryValue
+  };
 };
