@@ -1,26 +1,36 @@
 import { Modal, TextContainer } from '@shopify/polaris';
 
-export default function ModalConfirm({ showDialog, cancelNavigation, confirmNavigation }) {
+export default function ModalConfirm({
+  open,
+  cancelAction,
+  confirmAction,
+  title,
+  primaryActionTitle,
+  secondaryActionTitle,
+  bodyText,
+  loading
+}) {
   return (
     <Modal
-      open={showDialog}
-      onClose={cancelNavigation}
-      title="¿Salir de la página sin guardar los cambios?"
+      open={open}
+      onClose={cancelAction}
+      title={title}
       primaryAction={{
-        content: 'Abandonar página',
-        onAction: confirmNavigation,
-        destructive: true
+        content: primaryActionTitle,
+        onAction: confirmAction,
+        destructive: true,
+        loading
       }}
       secondaryActions={[
         {
-          content: 'Permanecer',
-          onAction: cancelNavigation
+          content: secondaryActionTitle,
+          onAction: cancelAction
         }
       ]}
     >
       <Modal.Section>
         <TextContainer>
-          <p>Al salir de esta página, se eliminarán todos los cambios sin guardar.</p>
+          <p>{bodyText}</p>
         </TextContainer>
       </Modal.Section>
     </Modal>
