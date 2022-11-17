@@ -116,9 +116,9 @@ export const CoursesCard = ({ courses, id, refetch }) => {
         {courses.map((course, index) => {
           const date = formatDate(course.date.toDate(), 'es', { dateStyle: 'long' });
           return (
-            <Card.Section subdued>
+            <Card.Section subdued key={index}>
               <Stack vertical spacing="tight">
-                <Stack spacing="tight" distribution="equalSpacing" key={index}>
+                <Stack spacing="tight" distribution="equalSpacing">
                   <Stack.Item fill>
                     <List.Item>
                       {course.name} <Badge status="success">{course.status}</Badge>
