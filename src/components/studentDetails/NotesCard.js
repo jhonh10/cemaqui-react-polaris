@@ -7,13 +7,13 @@ import { ModalForm } from '../ModalForm';
 import { NotesForm } from './NotesForm';
 import { updateStudentData } from '../../firebase/client';
 
-export const Notes = ({ notes, id, refetch }) => {
+export const NotesCard = ({ notes, id, refetch }) => {
   const [openModal, setOpenModal] = useState(false);
   const toggleOpenModal = useCallback(() => setOpenModal((openModal) => !openModal), []);
   const { handleToast } = useOutletContext();
 
   const studentNotes = notes ? (
-    <Text>{notes}</Text>
+    <Text truncate>{notes}</Text>
   ) : (
     <TextStyle variation="subdued">No hay notas sobre este alumno</TextStyle>
   );
@@ -23,12 +23,12 @@ export const Notes = ({ notes, id, refetch }) => {
   };
 
   const registerSchema = Yup.object().shape({
-    notes: Yup.string().max(50)
+    notes: Yup.string()
   });
 
   const onSubmit = async () => {
     try {
-      await updateStudentData(id, values.notes);
+      await updateStudentData({ docId: id, data: { notes: values.notes } });
       await refetch();
       setOpenModal(false);
       handleToast('Los datos del alumno han sido actualizados');
@@ -39,12 +39,11 @@ export const Notes = ({ notes, id, refetch }) => {
   const formik = useFormik({
     initialValues,
     validationSchema: registerSchema,
-    validateOnChange: false,
-    validateOnBlur: false,
+    enableReinitialize: true,
     onSubmit
   });
 
-  const { values, isSubmitting, handleSubmit, setFieldValue, handleReset } = formik;
+  const { values, isSubmitting, dirty, handleSubmit, setFieldValue, handleReset } = formik;
 
   const cancelAction = () => {
     toggleOpenModal();
@@ -56,6 +55,7 @@ export const Notes = ({ notes, id, refetch }) => {
       open={openModal}
       title="Editar notas"
       cancelAction={cancelAction}
+      disabled={!dirty}
       body={<NotesForm values={values} setFieldValue={setFieldValue} />}
       confirmAction={handleSubmit}
       loading={isSubmitting}
