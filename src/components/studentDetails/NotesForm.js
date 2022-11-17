@@ -11,6 +11,7 @@ export const NotesForm = ({ values, setFieldValue }) => (
           value={values.notes}
           onChange={(value) => setFieldValue('notes', value)}
           autoComplete="off"
+          multiline
         />
       </Stack>
     </Form>
