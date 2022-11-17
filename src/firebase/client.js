@@ -5,11 +5,15 @@ import {
   collection,
   getDocs,
   doc,
-  setDoc,
   Timestamp,
   getDoc,
   deleteDoc,
-  updateDoc
+  updateDoc,
+  addDoc,
+  where,
+  query,
+  arrayUnion,
+  arrayRemove
 } from 'firebase/firestore';
 
 const firebaseConfig = JSON.parse(process.env.REACT_APP_FIREBASE_CONFIG);
@@ -18,12 +22,14 @@ const firebaseConfig = JSON.parse(process.env.REACT_APP_FIREBASE_CONFIG);
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const formatDate = (date, locale, options) => new Intl.DateTimeFormat(locale, options).format(date);
+export const formatDate = (date, locale, options) =>
+  new Intl.DateTimeFormat(locale, options).format(date);
 
 const mapStudentFromFirebase = (doc) => {
   const data = doc.data();
   const { id } = doc;
   const { expeditionDate } = data;
+
   return {
     ...data,
     id,
@@ -53,10 +59,12 @@ export async function getStudentById(studentId) {
 }
 
 export async function addStudent(values) {
-  await setDoc(doc(db, 'Alumnos', `${values.documentId}`), {
+  const docRef = await addDoc(collection(db, 'Alumnos'), {
     ...values,
-    expeditionDate: Timestamp.fromDate(new Date())
+    expeditionDate: Timestamp.fromDate(new Date()),
+    courses: [{ name: values.course, date: Timestamp.fromDate(new Date()), status: 'Vigente' }]
   });
+  return docRef.id;
 }
 
 export async function deleteStudent(id, loading = () => {}) {
@@ -65,9 +73,31 @@ export async function deleteStudent(id, loading = () => {}) {
   loading(false);
 }
 
-export async function updateStudentData(id, data) {
-  const studentDocRef = doc(db, 'Alumnos', id);
+export async function updateStudentData({ docId, data = {} }) {
+  const studentDocRef = doc(db, 'Alumnos', docId);
+  await updateDoc(studentDocRef, data);
+}
+
+export async function updateStudentCourses({ docId, data = {} }) {
+  const studentDocRef = doc(db, 'Alumnos', docId);
   await updateDoc(studentDocRef, {
-    notes: data
+    courses: arrayUnion(data)
   });
+}
+
+export async function removeStudentCourse({ docId, data = {} }) {
+  const studentDocRef = doc(db, 'Alumnos', docId);
+  await updateDoc(studentDocRef, {
+    courses: arrayRemove(data)
+  });
+}
+
+export async function validateIfStudentExist({ id }) {
+  const q = query(collection(db, 'Alumnos'), where('documentId', '==', id));
+
+  const querySnapshot = await getDocs(q);
+  if (querySnapshot.size === 1) {
+    return querySnapshot.docs.map((doc) => doc.id);
+  }
+  return false;
 }
