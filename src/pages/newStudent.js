@@ -16,45 +16,13 @@ import {
 import ModalConfirm from '../components/ModalConfirm';
 import { useCallbackPrompt } from '../hooks/useCallBackPropmt';
 import { addStudent } from '../firebase/client';
+import { courses, resolutions } from '../json/coursesData';
 
 export default function NewStudent() {
   const [isDirty, setIsDirty] = useState(true);
   const [showPrompt, confirmNavigation, cancelNavigation] = useCallbackPrompt(isDirty);
   const { handleToast } = useOutletContext();
   const navigate = useNavigate();
-
-  const courses = [
-    {
-      value: '',
-      label: ''
-    },
-    {
-      value: 'Montacarga',
-      label: 'Montacarga'
-    },
-    {
-      value: 'Retroexcavadora',
-      label: 'Retroexcavadora'
-    },
-    {
-      value: 'Retro Oruga',
-      label: 'Retro Oruga'
-    }
-  ];
-  const resolutions = [
-    {
-      value: '',
-      label: ''
-    },
-    {
-      value: 'Resolucion 2888 de 2007 Decreto 4904 de 2009 MEN',
-      label: 'Resolucion 2888 de 2007 Decreto 4904 de 2009 MEN'
-    },
-    {
-      value: 'Resolucion 1409 de 2012 Decreto 4904 de 2009 MEN',
-      label: 'Resolucion 1409 de 2012 Decreto 4904 de 2009 MEN'
-    }
-  ];
 
   const initialValues = {
     firstname: '',
@@ -63,7 +31,7 @@ export default function NewStudent() {
     course: '',
     resolution: '',
     company: '',
-    adress: '',
+    address: '',
     phone: '',
     email: ''
   };
@@ -84,7 +52,7 @@ export default function NewStudent() {
     course: Yup.string().required('Seleccione un curso'),
     resolution: Yup.string().required('Seleccione una resolucion'),
     company: Yup.string(),
-    adress: Yup.string(),
+    address: Yup.string(),
     phone: Yup.string().matches(/^[0-9]+$/, 'Ingrese un numero de telefono valido'),
     email: Yup.string().email('No parece un email valido'),
     notes: Yup.string().max(50, 'Ingrese una nota maximo de 50 caracteres')
@@ -96,12 +64,16 @@ export default function NewStudent() {
     }, 200);
     return () => clearTimeout(timeOut);
   }
+
+  const handleOnSubmit = async () => {
+    const response = await addStudent(values);
+    await navigateAfterTwoSeconds(`/admin/students/${response}`);
+    setIsDirty(false);
+    handleToast('Alumno creado');
+  };
   const onSubmit = async () => {
     try {
-      await addStudent(values);
-      setIsDirty(false);
-      await navigateAfterTwoSeconds(`/admin/students/${values.documentId}`);
-      handleToast('Alumno creado');
+      await handleOnSubmit();
     } catch (error) {
       handleToast(error);
     }
@@ -129,7 +101,7 @@ export default function NewStudent() {
     />
   );
 
-  const modalPrompt = showPrompt && (
+  const modalPrompt = showPrompt ? (
     <ModalConfirm
       open={showPrompt}
       confirmAction={confirmNavigation}
@@ -139,7 +111,7 @@ export default function NewStudent() {
       secondaryActionTitle="Permanecer"
       bodyText="Al salir de esta página, se eliminarán todos los cambios sin guardar."
     />
-  );
+  ) : null;
 
   return (
     <Page
@@ -228,7 +200,7 @@ export default function NewStudent() {
                       label="Dirección"
                       placeholder="Dirección"
                       onChange={(value) => setFieldValue('adress', value)}
-                      value={values.adress}
+                      value={values.address}
                     />
                     <TextField
                       label="Email"
