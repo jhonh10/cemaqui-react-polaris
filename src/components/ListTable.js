@@ -28,7 +28,7 @@ const ListTable = ({ students }) => {
   const handleTaggedWithChange = useCallback((value) => setTaggedWith(value), []);
   const handleTaggedWithRemove = useCallback(() => setTaggedWith(''), []);
   const handleSortChange = useCallback((value) => setSortValue(value), []);
-  const handleOnClick = useCallback((id) => navigate(id), [navigate]);
+  const handleOnClick = useCallback((value) => navigate(value), [navigate]);
   const handleQueryValueRemove = useCallback(() => setQueryValue(''), [setQueryValue]);
   const handleClearAll = useCallback(() => {
     handleTaggedWithRemove();
