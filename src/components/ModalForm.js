@@ -1,6 +1,14 @@
 import { Modal } from '@shopify/polaris';
 
-export const ModalForm = ({ open, title, body, confirmAction, cancelAction, loading }) => (
+export const ModalForm = ({
+  open,
+  title,
+  body,
+  confirmAction,
+  cancelAction,
+  loading,
+  disabled
+}) => (
   <Modal
     open={open}
     title={title}
@@ -8,7 +16,8 @@ export const ModalForm = ({ open, title, body, confirmAction, cancelAction, load
     primaryAction={{
       content: 'Guardar',
       onAction: confirmAction,
-      loading
+      loading,
+      disabled
     }}
     secondaryActions={{
       content: 'Cerrar',
