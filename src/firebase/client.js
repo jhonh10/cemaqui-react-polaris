@@ -13,7 +13,10 @@ import {
   where,
   query,
   arrayUnion,
-  arrayRemove
+  arrayRemove,
+  orderBy,
+  limit,
+  startAfter
 } from 'firebase/firestore';
 
 const firebaseConfig = JSON.parse(process.env.REACT_APP_FIREBASE_CONFIG);
@@ -38,13 +41,24 @@ const mapStudentFromFirebase = (doc) => {
 };
 
 export async function getStudents() {
-  const studentsColl = collection(db, 'Alumnos');
+  const studentsColl = query(collection(db, 'Alumnos'), orderBy('expeditionDate'), limit(50));
   const studentSnapShot = await getDocs(studentsColl);
-  const studentList = studentSnapShot.docs.map(mapStudentFromFirebase);
-  if (studentList.length > 0) {
-    return studentList;
+  const lastVisible = studentSnapShot.docs[studentSnapShot.docs.length - 1];
+  if (studentSnapShot) {
+    const studentList = studentSnapShot.docs.map(mapStudentFromFirebase);
+    return { studentList, lastVisible };
   }
   return null;
+}
+
+export async function nextPage() {
+  const { lastVisible } = await getStudents();
+  return query(
+    collection(db, 'Alumnos'),
+    orderBy('expeditionDate'),
+    startAfter(lastVisible),
+    limit(50)
+  );
 }
 
 export async function getStudentById(studentId) {
