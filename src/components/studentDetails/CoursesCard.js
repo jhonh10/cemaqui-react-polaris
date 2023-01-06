@@ -3,12 +3,7 @@ import { useFormik } from 'formik';
 import { useCallback, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import * as Yup from 'yup';
-import {
-  formatDate,
-  removeStudentCourse,
-  updateStudentCourses,
-  updateStudentData
-} from '../../firebase/client';
+import { formatDate, updateStudentCourses, updateStudentData } from '../../firebase/client';
 import ModalConfirm from '../ModalConfirm';
 import { ModalForm } from '../ModalForm';
 import { AddCourseForm } from './AddCourseForm';
