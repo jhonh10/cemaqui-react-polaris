@@ -10,6 +10,7 @@ import {
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFilterStudents } from '../hooks/useFilterStudents';
+import { ListTablePagination } from './ListTablePagination';
 
 const ListTable = ({ students }) => {
   const resourceName = {
@@ -101,49 +102,52 @@ const ListTable = ({ students }) => {
   );
 
   const table = (
-    <Card>
-      <div style={{ padding: '16px', display: 'flex' }}>
-        <div style={{ flex: 1 }}>
-          <Filters
-            resourceName={resourceName}
-            queryPlaceholder="Filtrar estudiantes"
-            queryValue={queryValue}
-            filters={filters}
-            appliedFilters={appliedFilters}
-            onQueryChange={setQueryValue}
-            onQueryClear={handleQueryValueRemove}
-            onClearAll={handleClearAll}
-          />
+    <div style={{ margin: 'var(--p-space-4) 0' }}>
+      <Card>
+        <div style={{ padding: '16px', display: 'flex' }}>
+          <div style={{ flex: 1 }}>
+            <Filters
+              resourceName={resourceName}
+              queryPlaceholder="Filtrar estudiantes"
+              queryValue={queryValue}
+              filters={filters}
+              appliedFilters={appliedFilters}
+              onQueryChange={setQueryValue}
+              onQueryClear={handleQueryValueRemove}
+              onClearAll={handleClearAll}
+            />
+          </div>
+          <div style={{ paddingLeft: '0.25rem' }}>
+            <Select
+              labelInline
+              label="Filtrar por"
+              options={sortOptions}
+              value={sortValue}
+              onChange={handleSortChange}
+            />
+          </div>
         </div>
-        <div style={{ paddingLeft: '0.25rem' }}>
-          <Select
-            labelInline
-            label="Filtrar por"
-            options={sortOptions}
-            value={sortValue}
-            onChange={handleSortChange}
-          />
-        </div>
-      </div>
-      <IndexTable
-        resourceName={resourceName}
-        itemCount={filteredStudents.length}
-        selectedItemsCount={allResourcesSelected ? 'All' : selectedResources.length}
-        onSelectionChange={handleSelectionChange}
-        hasMoreItems
-        promotedBulkActions={promotedBulkActions}
-        lastColumnSticky
-        loading={isFiltering}
-        headings={[
-          { title: 'Nombre' },
-          { title: 'Numero de Cedula' },
-          { title: 'Fecha' },
-          { title: 'Resolucion', hidden: false }
-        ]}
-      >
-        {rowMarkup}
-      </IndexTable>
-    </Card>
+        <IndexTable
+          resourceName={resourceName}
+          itemCount={filteredStudents.length}
+          selectedItemsCount={allResourcesSelected ? 'All' : selectedResources.length}
+          onSelectionChange={handleSelectionChange}
+          hasMoreItems
+          promotedBulkActions={promotedBulkActions}
+          lastColumnSticky
+          loading={isFiltering}
+          headings={[
+            { title: 'Nombre' },
+            { title: 'Numero de Cedula' },
+            { title: 'Fecha' },
+            { title: 'Resolucion', hidden: false }
+          ]}
+        >
+          {rowMarkup}
+        </IndexTable>
+        <ListTablePagination />
+      </Card>
+    </div>
   );
 
   return table;
