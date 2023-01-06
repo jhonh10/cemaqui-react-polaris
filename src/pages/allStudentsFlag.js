@@ -6,5 +6,5 @@ export default function AllStudentsFlag() {
 
   if (isLoading) return <div>Cargando...</div>;
   if (!students) return <div>No students</div>;
-  return <AllStudents students={students} />;
+  return <AllStudents students={students.studentList} />;
 }
