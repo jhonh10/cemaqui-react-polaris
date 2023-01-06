@@ -14,10 +14,10 @@ export const StudentDetails = ({ studentData, refetch }) => {
   const navigate = useNavigate();
   const [openModal, setOpenModal] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { firstname, lastname, courses, documentId, notes, email, createdAt, phone, address, id } =
+  const { firstname, lastname, courses, documentId, notes, email, phone, address, id } =
     studentData;
-
-  // const { dateTime, timeAgo } = useTimeAgo(new Date());
+  // const timestamp = new Date();
+  // const { dateTime, timeAgo } = useTimeAgo(timestamp);
   // console.log(dateTime, timeAgo);
 
   const handleDelete = async () => {
