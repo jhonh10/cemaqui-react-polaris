@@ -5,6 +5,7 @@ import ListTable from '../components/ListTable';
 export const AllStudents = ({ students }) => {
   const navigate = useNavigate();
   const handlestudentCreate = () => navigate('new');
+  console.log(students);
 
   return (
     <Page
