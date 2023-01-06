@@ -7,13 +7,17 @@ const DATE_UNITS = {
 
 const getSecondsDiff = (timestamp) => (Date.now() - timestamp) / 1000;
 
-const getUnitAndValueDate = (secondsElapse) =>
+const getUnitAndValueDate = (secondsElapse) => {
+  const values = [];
+  console.log(values);
   Object.entries(DATE_UNITS).forEach(([unit, secondsInUnit]) => {
     if (secondsElapse >= secondsInUnit || unit === 'second') {
       const value = Math.floor(secondsElapse / secondsInUnit) * -1;
-      return { value, unit };
+      values.push(value, unit);
     }
   });
+  return values;
+};
 //   for (const [unit, secondsInUnit] of Object.entries(DATE_UNITS)) {
 //     if (secondsElapse >= secondsInUnit || unit === 'second') {
 //       const value = Math.floor(secondsElapse / secondsInUnit) * -1;
