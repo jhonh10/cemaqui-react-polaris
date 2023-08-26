@@ -1,27 +1,32 @@
 import { useCallback, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Yup from 'yup';
 import { useFormik } from 'formik';
-import { Button, Card, Subheading, TextContainer, Stack, Text, TextStyle } from '@shopify/polaris';
+import { Text, LegacyCard, LegacyStack, VerticalStack } from '@shopify/polaris';
 import { ModalForm } from '../ModalForm';
 import { updateStudentData } from '../../firebase/client';
 import { ContactInfoForm } from './ContacInfoForm';
 
-export const ContactInfoCard = ({ email, phone, id, refetch }) => {
+export const ContactInfoCard = ({ email, phone, id }) => {
   const [openModal, setOpenModal] = useState(false);
   const toggleOpenModal = useCallback(() => setOpenModal((openModal) => !openModal), []);
   const { handleToast } = useOutletContext();
 
   const studentEmail = email ? (
-    <Text>{email}</Text>
+    <Text as="span">{email}</Text>
   ) : (
-    <TextStyle variation="subdued">No se ingreso un correo electronico</TextStyle>
+    <Text color="subdued" as="span">
+      No se ingreso un correo electronico
+    </Text>
   );
 
   const studentPhone = phone ? (
-    <Text>{`+57 ${phone}`}</Text>
+    <Text as="span">{`+57 ${phone}`}</Text>
   ) : (
-    <TextStyle variation="subdued">No se ingreso un numero de telefono</TextStyle>
+    <Text color="subdued" as="span">
+      No se ingreso un numero de telefono
+    </Text>
   );
 
   const initialValues = {
@@ -35,16 +40,22 @@ export const ContactInfoCard = ({ email, phone, id, refetch }) => {
       .min(10, 'No parece un numero valido'),
     email: Yup.string().email('No parece un email valido')
   });
+  const queryClient = useQueryClient();
 
-  const onSubmit = async () => {
-    try {
-      await updateStudentData({ docId: id, data: { email: values.email, phone: values.phone } });
-      await refetch();
+  const updateContactInfoMutation = useMutation({
+    mutationFn: updateStudentData,
+    onSuccess: () => {
+      queryClient.invalidateQueries('studentById');
       setOpenModal(false);
       handleToast('Los datos del alumno han sido actualizados');
-    } catch (error) {
-      handleToast(error);
     }
+  });
+
+  const onSubmit = async () => {
+    await updateContactInfoMutation.mutateAsync({
+      docId: id,
+      data: { email: values.email, phone: values.phone }
+    });
   };
   const formik = useFormik({
     initialValues,
@@ -75,28 +86,17 @@ export const ContactInfoCard = ({ email, phone, id, refetch }) => {
   return (
     <>
       {modalForm}
-      <Card.Section>
-        <Stack vertical>
-          <Stack>
-            <Stack.Item fill>
-              <Subheading>Informacion de contácto</Subheading>
-            </Stack.Item>
-            <Button plain onClick={toggleOpenModal}>
-              Editar
-            </Button>
-          </Stack>
-          <Stack vertical>
-            <TextContainer spacing="tight">
-              <Stack vertical>
-                <Stack vertical spacing="tight">
-                  {studentEmail}
-                  {studentPhone}
-                </Stack>
-              </Stack>
-            </TextContainer>
-          </Stack>
-        </Stack>
-      </Card.Section>
+      <LegacyCard.Section
+        title="Información de contácto"
+        actions={[{ content: 'Editar', onAction: toggleOpenModal }]}
+      >
+        <VerticalStack>
+          <LegacyStack vertical>
+            {studentEmail}
+            {studentPhone}
+          </LegacyStack>
+        </VerticalStack>
+      </LegacyCard.Section>
     </>
   );
 };

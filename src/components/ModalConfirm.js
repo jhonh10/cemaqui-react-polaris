@@ -1,4 +1,4 @@
-import { Modal, TextContainer } from '@shopify/polaris';
+import { Modal, TextContainer, VerticalStack } from '@shopify/polaris';
 
 export default function ModalConfirm({
   open,
@@ -29,9 +29,9 @@ export default function ModalConfirm({
       ]}
     >
       <Modal.Section>
-        <TextContainer>
+        <VerticalStack>
           <p>{bodyText}</p>
-        </TextContainer>
+        </VerticalStack>
       </Modal.Section>
     </Modal>
   );
