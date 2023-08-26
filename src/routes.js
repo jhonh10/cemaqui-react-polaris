@@ -1,6 +1,13 @@
 import { AppProvider } from '@shopify/polaris';
 import translations from '@shopify/polaris/locales/es.json';
-import { BrowserRouter, Routes, Route, Link as ReactRouterLink } from 'react-router-dom';
+import { useI18n } from '@shopify/react-i18n';
+import {
+  Route,
+  Link as ReactRouterLink,
+  createBrowserRouter,
+  createRoutesFromElements,
+  RouterProvider
+} from 'react-router-dom';
 import StudentFlag from './pages/studentFlag';
 import Home from './pages/home';
 import NewStudent from './pages/newStudent';
@@ -8,19 +15,20 @@ import AllStudentsFlag from './pages/allStudentsFlag';
 import LayoutPage from './layout/layoutPage';
 
 export default function App() {
+  const router = createBrowserRouter(
+    createRoutesFromElements(
+      <Route path="/admin" element={<LayoutPage />}>
+        <Route index element={<Home />} />
+        <Route path="students" element={<AllStudentsFlag />} />
+        <Route path="students/:studentId" element={<StudentFlag />} />
+        <Route path="students/new" element={<NewStudent />} />
+      </Route>
+    )
+  );
   return (
-    <BrowserRouter>
-      <AppProvider linkComponent={Link} i18n={translations}>
-        <Routes>
-          <Route path="/admin" element={<LayoutPage />}>
-            <Route index element={<Home />} />
-            <Route path="students" element={<AllStudentsFlag />} />
-            <Route path="students/:studentId" element={<StudentFlag />} />
-            <Route path="students/new" element={<NewStudent />} />
-          </Route>
-        </Routes>
-      </AppProvider>
-    </BrowserRouter>
+    <AppProvider linkComponent={Link} i18n={translations}>
+      <RouterProvider router={router} />
+    </AppProvider>
   );
 }
 
