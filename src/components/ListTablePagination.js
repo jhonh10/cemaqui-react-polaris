@@ -1,4 +1,4 @@
-import { Pagination, Stack } from '@shopify/polaris';
+import { LegacyStack, Pagination, Stack } from '@shopify/polaris';
 import React from 'react';
 import { getStudents, nextPage } from '../firebase/client';
 
@@ -9,7 +9,7 @@ export const ListTablePagination = () => (
       padding: 'var(--p-space-3) var(--p-space-4) var(--p-space-5) var(--p-space-4)'
     }}
   >
-    <Stack distribution="center">
+    <LegacyStack distribution="center">
       <Pagination
         hasPrevious
         previousKeys={[74]}
@@ -22,6 +22,6 @@ export const ListTablePagination = () => (
         nextTooltip="k"
         onNext={async () => nextPage()}
       />
-    </Stack>
+    </LegacyStack>
   </div>
 );
