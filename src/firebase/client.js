@@ -1,5 +1,5 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from 'firebase/app';
+import { initializeApp } from "firebase/app";
 import {
   getFirestore,
   collection,
@@ -16,8 +16,8 @@ import {
   arrayRemove,
   orderBy,
   limit,
-  startAfter
-} from 'firebase/firestore';
+  startAfter,
+} from "firebase/firestore";
 
 const firebaseConfig = JSON.parse(process.env.REACT_APP_FIREBASE_CONFIG);
 
@@ -36,14 +36,14 @@ const mapStudentFromFirebase = (doc) => {
   return {
     ...data,
     id,
-    createdAt: formatDate(expeditionDate.toDate(), 'es', { dateStyle: 'long' })
+    createdAt: formatDate(expeditionDate.toDate(), "es", { dateStyle: "long" }),
   };
 };
 
 export async function getStudents() {
   const studentsColl = query(
-    collection(db, 'Alumnos'),
-    orderBy('expeditionDate', 'desc'),
+    collection(db, "Alumnos"),
+    orderBy("expeditionDate", "desc"),
     limit(50)
   );
   const studentSnapShot = await getDocs(studentsColl);
@@ -58,15 +58,15 @@ export async function getStudents() {
 export async function nextPage() {
   const { lastVisible } = await getStudents();
   return query(
-    collection(db, 'Alumnos'),
-    orderBy('expeditionDate'),
+    collection(db, "Alumnos"),
+    orderBy("expeditionDate"),
     startAfter(lastVisible),
     limit(50)
   );
 }
 
 export async function getStudentById(studentId) {
-  const docRef = doc(db, 'Alumnos', `${studentId}`);
+  const docRef = doc(db, "Alumnos", `${studentId}`);
   const docSnap = await getDoc(docRef);
 
   if (docSnap.exists()) {
@@ -77,41 +77,47 @@ export async function getStudentById(studentId) {
 }
 
 export async function addStudent(values) {
-  const docRef = await addDoc(collection(db, 'Alumnos'), {
+  const docRef = await addDoc(collection(db, "Alumnos"), {
     ...values,
     expeditionDate: Timestamp.fromDate(new Date()),
-    courses: [{ name: values.course, date: Timestamp.fromDate(new Date()), status: 'Vigente' }]
+    courses: [
+      {
+        name: values.course,
+        date: Timestamp.fromDate(new Date()),
+        status: "Vigente",
+      },
+    ],
   });
   return docRef.id;
 }
 
 export async function deleteStudent(id, loading = () => {}) {
   loading(true);
-  await deleteDoc(doc(db, 'Alumnos', id));
+  await deleteDoc(doc(db, "Alumnos", id));
   loading(false);
 }
 
 export async function updateStudentData({ docId, data = {} }) {
-  const studentDocRef = doc(db, 'Alumnos', docId);
+  const studentDocRef = doc(db, "Alumnos", docId);
   await updateDoc(studentDocRef, data);
 }
 
 export async function updateStudentCourses({ docId, data = {} }) {
-  const studentDocRef = doc(db, 'Alumnos', docId);
+  const studentDocRef = doc(db, "Alumnos", docId);
   await updateDoc(studentDocRef, {
-    courses: arrayUnion(data)
+    courses: arrayUnion(data),
   });
 }
 
 export async function removeStudentCourse({ docId, data = {} }) {
-  const studentDocRef = doc(db, 'Alumnos', docId);
+  const studentDocRef = doc(db, "Alumnos", docId);
   await updateDoc(studentDocRef, {
-    courses: arrayRemove(data)
+    courses: arrayRemove(data),
   });
 }
 
 export async function validateIfStudentExist({ id }) {
-  const q = query(collection(db, 'Alumnos'), where('documentId', '==', id));
+  const q = query(collection(db, "Alumnos"), where("documentId", "==", id));
 
   const querySnapshot = await getDocs(q);
   if (querySnapshot.size === 1) {

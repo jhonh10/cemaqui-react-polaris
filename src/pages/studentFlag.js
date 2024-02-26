@@ -1,6 +1,6 @@
-import { useParams } from 'react-router-dom';
-import { useFetchStudentById } from '../hooks/useFetchStudentById';
-import { StudentDetails } from './studentDetails';
+import { useParams } from "react-router-dom";
+import { useFetchStudentById } from "../hooks/useFetchStudentById";
+import { StudentDetails } from "./studentDetails";
 
 export default function StudentFlag() {
   const { studentId } = useParams();

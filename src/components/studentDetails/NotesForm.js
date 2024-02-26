@@ -1,5 +1,5 @@
-import { Form, FormikProvider } from 'formik';
-import { TextField, Stack } from '@shopify/polaris';
+import { Form, FormikProvider } from "formik";
+import { TextField, Stack } from "@shopify/polaris";
 
 export const NotesForm = ({ values, setFieldValue }) => (
   <FormikProvider value={values}>
@@ -9,7 +9,7 @@ export const NotesForm = ({ values, setFieldValue }) => (
           placeholder="Agregar una nota"
           showCharacterCount
           value={values.notes}
-          onChange={(value) => setFieldValue('notes', value)}
+          onChange={(value) => setFieldValue("notes", value)}
           autoComplete="off"
           multiline
         />

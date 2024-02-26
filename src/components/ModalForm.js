@@ -1,4 +1,4 @@
-import { Modal } from '@shopify/polaris';
+import { Modal } from "@shopify/polaris";
 
 export const ModalForm = ({
   open,
@@ -7,21 +7,21 @@ export const ModalForm = ({
   confirmAction,
   cancelAction,
   loading,
-  disabled
+  disabled,
 }) => (
   <Modal
     open={open}
     title={title}
     onClose={cancelAction}
     primaryAction={{
-      content: 'Guardar',
+      content: "Guardar",
       onAction: confirmAction,
       loading,
-      disabled
+      disabled,
     }}
     secondaryActions={{
-      content: 'Cerrar',
-      onAction: cancelAction
+      content: "Cerrar",
+      onAction: cancelAction,
     }}
   >
     <Modal.Section>{body}</Modal.Section>

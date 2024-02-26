@@ -1,16 +1,19 @@
-import { LegacyCard, LegacyStack, Text, VerticalStack } from '@shopify/polaris';
-import React, { useCallback, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Yup from 'yup';
-import { useFormik } from 'formik';
-import { AddressInfoForm } from './AddressInfoForm';
-import { updateStudentData } from '../../firebase/client';
-import { ModalForm } from '../ModalForm';
+import { LegacyCard, LegacyStack, Text, VerticalStack } from "@shopify/polaris";
+import React, { useCallback, useState } from "react";
+import { useOutletContext } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import * as Yup from "yup";
+import { useFormik } from "formik";
+import { AddressInfoForm } from "./AddressInfoForm";
+import { updateStudentData } from "../../firebase/client";
+import { ModalForm } from "../ModalForm";
 
 export const AdressInfoCard = ({ address, id }) => {
   const [openModal, setOpenModal] = useState(false);
-  const toggleOpenModal = useCallback(() => setOpenModal((openModal) => !openModal), []);
+  const toggleOpenModal = useCallback(
+    () => setOpenModal((openModal) => !openModal),
+    []
+  );
   const { handleToast } = useOutletContext();
 
   const studentAddress = address ? (
@@ -22,37 +25,45 @@ export const AdressInfoCard = ({ address, id }) => {
   );
 
   const initialValues = {
-    address
+    address,
   };
 
   const registerSchema = Yup.object().shape({
-    address: Yup.string()
+    address: Yup.string(),
   });
   const queryClient = useQueryClient();
   const updateAddresMutation = useMutation({
     mutationFn: updateStudentData,
     onSuccess: () => {
-      queryClient.invalidateQueries('studentById');
+      queryClient.invalidateQueries("studentById");
       setOpenModal(false);
-      handleToast('Los datos del alumno han sido actualizados');
+      handleToast("Los datos del alumno han sido actualizados");
     },
-    onError: (error) => handleToast(error)
+    onError: (error) => handleToast(error),
   });
 
   const onSubmit = async () => {
     await updateAddresMutation.mutateAsync({
       docId: id,
-      data: { address: values.address }
+      data: { address: values.address },
     });
   };
   const formik = useFormik({
     initialValues,
     validationSchema: registerSchema,
     enableReinitialize: true,
-    onSubmit
+    onSubmit,
   });
 
-  const { errors, values, isSubmitting, dirty, handleSubmit, setFieldValue, handleReset } = formik;
+  const {
+    errors,
+    values,
+    isSubmitting,
+    dirty,
+    handleSubmit,
+    setFieldValue,
+    handleReset,
+  } = formik;
 
   const cancelAction = () => {
     toggleOpenModal();
@@ -65,7 +76,13 @@ export const AdressInfoCard = ({ address, id }) => {
       title="Editar dirección"
       cancelAction={cancelAction}
       disabled={!dirty}
-      body={<AddressInfoForm values={values} setFieldValue={setFieldValue} error={errors} />}
+      body={
+        <AddressInfoForm
+          values={values}
+          setFieldValue={setFieldValue}
+          error={errors}
+        />
+      }
       confirmAction={handleSubmit}
       loading={isSubmitting}
     />
@@ -75,7 +92,7 @@ export const AdressInfoCard = ({ address, id }) => {
       {modalForm}
       <LegacyCard.Section
         title="Direccion Predeterminada"
-        actions={[{ content: 'Gestionar', onAction: toggleOpenModal }]}
+        actions={[{ content: "Gestionar", onAction: toggleOpenModal }]}
       >
         <VerticalStack>
           <LegacyStack vertical>{studentAddress}</LegacyStack>
