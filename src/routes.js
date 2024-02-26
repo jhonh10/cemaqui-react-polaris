@@ -1,6 +1,6 @@
 import { AppProvider } from '@shopify/polaris';
 import translations from '@shopify/polaris/locales/es.json';
-import { useI18n } from '@shopify/react-i18n';
+
 import {
   Route,
   Link as ReactRouterLink,
