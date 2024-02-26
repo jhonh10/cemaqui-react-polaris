@@ -1,4 +1,4 @@
-import { Modal, TextContainer, VerticalStack } from '@shopify/polaris';
+import { Modal, TextContainer, VerticalStack } from "@shopify/polaris";
 
 export default function ModalConfirm({
   open,
@@ -8,7 +8,7 @@ export default function ModalConfirm({
   primaryActionTitle,
   secondaryActionTitle,
   bodyText,
-  loading
+  loading,
 }) {
   return (
     <Modal
@@ -19,13 +19,13 @@ export default function ModalConfirm({
         content: primaryActionTitle,
         onAction: confirmAction,
         destructive: true,
-        loading
+        loading,
       }}
       secondaryActions={[
         {
           content: secondaryActionTitle,
-          onAction: cancelAction
-        }
+          onAction: cancelAction,
+        },
       ]}
     >
       <Modal.Section>

@@ -5,9 +5,9 @@ import {
   Card,
   TextContainer,
   SkeletonDisplayText,
-  SkeletonBodyText
-} from '@shopify/polaris';
-import { useOutletContext } from 'react-router-dom';
+  SkeletonBodyText,
+} from "@shopify/polaris";
+import { useOutletContext } from "react-router-dom";
 
 export default function Home() {
   const { isFetching } = useOutletContext();

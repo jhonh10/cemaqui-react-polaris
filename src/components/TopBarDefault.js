@@ -1,19 +1,25 @@
-import { TopBar, ActionList } from '@shopify/polaris';
-import { useState, useCallback } from 'react';
+import { TopBar, ActionList } from "@shopify/polaris";
+import { useState, useCallback } from "react";
 
-export default function TopBarDefault({ storeName, setMobileNavigationActive }) {
+export default function TopBarDefault({
+  storeName,
+  setMobileNavigationActive,
+}) {
   const [searchActive, setSearchActive] = useState(false);
 
   const [userMenuActive, setUserMenuActive] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
+  const [searchValue, setSearchValue] = useState("");
 
   const handleSearchResultsDismiss = useCallback(() => {
     setSearchActive(false);
-    setSearchValue('');
+    setSearchValue("");
   }, []);
 
   const toggleMobileNavigationActive = useCallback(
-    () => setMobileNavigationActive((mobileNavigationActive) => !mobileNavigationActive),
+    () =>
+      setMobileNavigationActive(
+        (mobileNavigationActive) => !mobileNavigationActive
+      ),
     [setMobileNavigationActive]
   );
 
@@ -29,8 +35,8 @@ export default function TopBarDefault({ storeName, setMobileNavigationActive }) 
 
   const userMenuActions = [
     {
-      items: [{ content: 'Community forums' }]
-    }
+      items: [{ content: "Community forums" }],
+    },
   ];
   const userMenuMarkup = (
     <TopBar.UserMenu
@@ -50,7 +56,12 @@ export default function TopBarDefault({ storeName, setMobileNavigationActive }) 
     />
   );
   const searchResultsMarkup = (
-    <ActionList items={[{ content: 'Shopify help center' }, { content: 'Community forums' }]} />
+    <ActionList
+      items={[
+        { content: "Shopify help center" },
+        { content: "Community forums" },
+      ]}
+    />
   );
 
   return (

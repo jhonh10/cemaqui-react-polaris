@@ -1,33 +1,40 @@
-import { Badge, LegacyCard, List, Text } from '@shopify/polaris';
-import { useFormik } from 'formik';
-import { useCallback, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Yup from 'yup';
-import { formatDate, updateStudentCourses, updateStudentData } from '../../firebase/client';
-import ModalConfirm from '../ModalConfirm';
-import { ModalForm } from '../ModalForm';
-import { AddCourseForm } from './AddCourseForm';
+import { Badge, LegacyCard, List, Text } from "@shopify/polaris";
+import { useFormik } from "formik";
+import { useCallback, useState } from "react";
+import { useOutletContext } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import * as Yup from "yup";
+import {
+  formatDate,
+  updateStudentCourses,
+  updateStudentData,
+} from "../../firebase/client";
+import ModalConfirm from "../ModalConfirm";
+import { ModalForm } from "../ModalForm";
+import { AddCourseForm } from "./AddCourseForm";
 
 export const CoursesCard = ({ courses, id }) => {
   const [openModal, setOpenModal] = useState(false);
   const [openModalPropmt, setOpenModalPropmt] = useState(false);
   const [courseToRemove, setCourseToRemove] = useState({
-    name: '',
-    index: null
+    name: "",
+    index: null,
   });
   const [loading, setLoading] = useState(false);
   const { handleToast } = useOutletContext();
-  const toggleOpenModal = useCallback(() => setOpenModal((openModal) => !openModal), []);
+  const toggleOpenModal = useCallback(
+    () => setOpenModal((openModal) => !openModal),
+    []
+  );
 
   const initialValues = {
-    course: '',
-    resolution: ''
+    course: "",
+    resolution: "",
   };
 
   const registerSchema = Yup.object().shape({
-    course: Yup.string().required('Seleccione un curso'),
-    resolution: Yup.string().required('Seleccione una resolucion')
+    course: Yup.string().required("Seleccione un curso"),
+    resolution: Yup.string().required("Seleccione una resolucion"),
   });
 
   const queryClient = useQueryClient();
@@ -35,12 +42,12 @@ export const CoursesCard = ({ courses, id }) => {
   const updateStudentMutation = useMutation({
     mutationFn: updateStudentCourses,
     onSuccess: () => {
-      queryClient.invalidateQueries('studentById');
+      queryClient.invalidateQueries("studentById");
       setOpenModal(false);
-      handleToast('Los datos del alumno han sido actualizados');
+      handleToast("Los datos del alumno han sido actualizados");
       handleReset();
     },
-    onError: (error) => handleToast(error)
+    onError: (error) => handleToast(error),
   });
 
   const deleteCourseMutation = useMutation({
@@ -48,25 +55,33 @@ export const CoursesCard = ({ courses, id }) => {
     onSuccess: () => {
       setLoading(false);
       setOpenModalPropmt(false);
-      handleToast('Cursos actualizados correctamente');
+      handleToast("Cursos actualizados correctamente");
     },
-    onError: (error) => handleToast(error)
+    onError: (error) => handleToast(error),
   });
 
   const onSubmit = async () => {
     await updateStudentMutation.mutateAsync({
       docId: id,
-      data: { name: values.course, date: new Date(), status: 'Vigente' }
+      data: { name: values.course, date: new Date(), status: "Vigente" },
     });
   };
   const formik = useFormik({
     initialValues,
     validationSchema: registerSchema,
     enableReinitialize: true,
-    onSubmit
+    onSubmit,
   });
 
-  const { errors, values, isSubmitting, dirty, handleSubmit, setFieldValue, handleReset } = formik;
+  const {
+    errors,
+    values,
+    isSubmitting,
+    dirty,
+    handleSubmit,
+    setFieldValue,
+    handleReset,
+  } = formik;
 
   const cancelAction = () => {
     toggleOpenModal();
@@ -78,7 +93,7 @@ export const CoursesCard = ({ courses, id }) => {
     courses.splice(fieldId, 1);
     await deleteCourseMutation.mutateAsync({
       docId: id,
-      data: { courses }
+      data: { courses },
     });
   };
 
@@ -93,7 +108,13 @@ export const CoursesCard = ({ courses, id }) => {
       title="Editar informacion de contacto"
       cancelAction={cancelAction}
       disabled={!dirty}
-      body={<AddCourseForm values={values} setFieldValue={setFieldValue} error={errors} />}
+      body={
+        <AddCourseForm
+          values={values}
+          setFieldValue={setFieldValue}
+          error={errors}
+        />
+      }
       confirmAction={handleSubmit}
       loading={isSubmitting}
     />
@@ -117,20 +138,25 @@ export const CoursesCard = ({ courses, id }) => {
       {modalForm}
       <LegacyCard
         title="Cursos realizados"
-        primaryFooterAction={{ content: 'Agregar curso', onAction: toggleOpenModal }}
+        primaryFooterAction={{
+          content: "Agregar curso",
+          onAction: toggleOpenModal,
+        }}
       >
         {courses.map((course, index) => {
-          const date = formatDate(course.date.toDate(), 'es', { dateStyle: 'long' });
+          const date = formatDate(course.date.toDate(), "es", {
+            dateStyle: "long",
+          });
           return (
             <LegacyCard.Section
               subdued
               key={index}
               actions={[
                 {
-                  content: 'Eliminar',
+                  content: "Eliminar",
                   destructive: true,
-                  onAction: () => handleDelete(course, index)
-                }
+                  onAction: () => handleDelete(course, index),
+                },
               ]}
             >
               <List>

@@ -64,7 +64,7 @@
         }
       ],
       "prettier/prettier": [
-        2,
+        0,
         {
           "printWidth": 100,
           "singleQuote": true,

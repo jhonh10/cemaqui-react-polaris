@@ -1,16 +1,19 @@
-import { useCallback, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Yup from 'yup';
-import { useFormik } from 'formik';
-import { LegacyCard, Text } from '@shopify/polaris';
-import { ModalForm } from '../ModalForm';
-import { NotesForm } from './NotesForm';
-import { updateStudentData } from '../../firebase/client';
+import { useCallback, useState } from "react";
+import { useOutletContext } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import * as Yup from "yup";
+import { useFormik } from "formik";
+import { LegacyCard, Text } from "@shopify/polaris";
+import { ModalForm } from "../ModalForm";
+import { NotesForm } from "./NotesForm";
+import { updateStudentData } from "../../firebase/client";
 
 export const NotesCard = ({ notes, id }) => {
   const [openModal, setOpenModal] = useState(false);
-  const toggleOpenModal = useCallback(() => setOpenModal((openModal) => !openModal), []);
+  const toggleOpenModal = useCallback(
+    () => setOpenModal((openModal) => !openModal),
+    []
+  );
   const { handleToast } = useOutletContext();
 
   const studentNotes = notes ? (
@@ -24,11 +27,11 @@ export const NotesCard = ({ notes, id }) => {
   );
 
   const initialValues = {
-    notes
+    notes,
   };
 
   const registerSchema = Yup.object().shape({
-    notes: Yup.string()
+    notes: Yup.string(),
   });
 
   const queryClient = useQueryClient();
@@ -36,30 +39,37 @@ export const NotesCard = ({ notes, id }) => {
   const updateNotesMutation = useMutation({
     mutationFn: updateStudentData,
     onSuccess: () => {
-      queryClient.invalidateQueries('studentById');
+      queryClient.invalidateQueries("studentById");
       setOpenModal(false);
-      handleToast('Los datos del alumno han sido actualizados');
+      handleToast("Los datos del alumno han sido actualizados");
     },
     onError: (error) => {
       setOpenModal(false);
       handleToast(error);
-    }
+    },
   });
 
   const onSubmit = async () => {
     await updateNotesMutation.mutateAsync({
       docId: id,
-      data: { notes: values.notes }
+      data: { notes: values.notes },
     });
   };
   const formik = useFormik({
     initialValues,
     validationSchema: registerSchema,
     enableReinitialize: true,
-    onSubmit
+    onSubmit,
   });
 
-  const { values, isSubmitting, dirty, handleSubmit, setFieldValue, handleReset } = formik;
+  const {
+    values,
+    isSubmitting,
+    dirty,
+    handleSubmit,
+    setFieldValue,
+    handleReset,
+  } = formik;
 
   const cancelAction = () => {
     toggleOpenModal();
@@ -81,7 +91,10 @@ export const NotesCard = ({ notes, id }) => {
   return (
     <>
       {modalForm}
-      <LegacyCard title="Notas" actions={[{ content: 'Editar', onAction: toggleOpenModal }]}>
+      <LegacyCard
+        title="Notas"
+        actions={[{ content: "Editar", onAction: toggleOpenModal }]}
+      >
         <LegacyCard.Section>{studentNotes}</LegacyCard.Section>
       </LegacyCard>
     </>

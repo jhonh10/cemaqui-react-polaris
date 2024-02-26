@@ -1,5 +1,5 @@
-import { useFetchStudents } from '../hooks/useFetchStudents';
-import { AllStudents } from './allStudents';
+import { useFetchStudents } from "../hooks/useFetchStudents";
+import { AllStudents } from "./allStudents";
 
 export default function AllStudentsFlag() {
   const { students, isLoading, isError, error } = useFetchStudents();

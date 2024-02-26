@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { useNavigate, useOutletContext } from 'react-router-dom';
-import ReactRouterPrompt from 'react-router-prompt';
-import * as Yup from 'yup';
-import { Form, FormikProvider, useFormik } from 'formik';
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useNavigate, useOutletContext } from "react-router-dom";
+import ReactRouterPrompt from "react-router-prompt";
+import * as Yup from "yup";
+import { Form, FormikProvider, useFormik } from "formik";
 import {
   Page,
   Layout,
@@ -13,11 +13,11 @@ import {
   Banner,
   List,
   Select,
-  LegacyCard
-} from '@shopify/polaris';
-import ModalConfirm from '../components/ModalConfirm';
-import { addStudent } from '../firebase/client';
-import { courses, resolutions } from '../json/coursesData';
+  LegacyCard,
+} from "@shopify/polaris";
+import ModalConfirm from "../components/ModalConfirm";
+import { addStudent } from "../firebase/client";
+import { courses, resolutions } from "../json/coursesData";
 
 export default function NewStudent() {
   const [isDirty, setIsDirty] = useState(true);
@@ -25,37 +25,40 @@ export default function NewStudent() {
   const navigate = useNavigate();
 
   const initialValues = {
-    firstname: '',
-    lastname: '',
-    documentId: '',
-    course: '',
-    resolution: '',
-    company: '',
-    address: '',
-    phone: '',
-    email: ''
+    firstname: "",
+    lastname: "",
+    documentId: "",
+    course: "",
+    resolution: "",
+    company: "",
+    address: "",
+    phone: "",
+    email: "",
   };
 
   const registerSchema = Yup.object().shape({
     firstname: Yup.string()
-      .min(2, 'Muy Corto!')
-      .max(50, 'Muy Largo!')
-      .required('Nombre es requerido'),
+      .min(2, "Muy Corto!")
+      .max(50, "Muy Largo!")
+      .required("Nombre es requerido"),
     lastname: Yup.string()
-      .min(2, 'Muy Corto!')
-      .max(50, 'Muy Largo!')
-      .required('ingrese un apellido'),
+      .min(2, "Muy Corto!")
+      .max(50, "Muy Largo!")
+      .required("ingrese un apellido"),
     documentId: Yup.string()
-      .matches(/^[0-9]+$/, 'Deben ser solo numeros')
-      .min(5, 'No parece un documento valido')
-      .required('Cedula es requerida'),
-    course: Yup.string().required('Seleccione un curso'),
-    resolution: Yup.string().required('Seleccione una resolucion'),
+      .matches(/^[0-9]+$/, "Deben ser solo numeros")
+      .min(5, "No parece un documento valido")
+      .required("Cedula es requerida"),
+    course: Yup.string().required("Seleccione un curso"),
+    resolution: Yup.string().required("Seleccione una resolucion"),
     company: Yup.string(),
     address: Yup.string(),
-    phone: Yup.string().matches(/^[0-9]+$/, 'Ingrese un numero de telefono valido'),
-    email: Yup.string().email('No parece un email valido'),
-    notes: Yup.string().max(50, 'Ingrese una nota maximo de 50 caracteres')
+    phone: Yup.string().matches(
+      /^[0-9]+$/,
+      "Ingrese un numero de telefono valido"
+    ),
+    email: Yup.string().email("No parece un email valido"),
+    notes: Yup.string().max(50, "Ingrese una nota maximo de 50 caracteres"),
   });
 
   async function navigateAfterTwoSeconds(url) {
@@ -70,8 +73,8 @@ export default function NewStudent() {
     onSuccess: async (data) => {
       await navigateAfterTwoSeconds(`/admin/students/${data}`);
       setIsDirty(false);
-      handleToast('Alumno creado');
-    }
+      handleToast("Alumno creado");
+    },
   });
 
   const handleOnSubmit = () => {
@@ -90,7 +93,7 @@ export default function NewStudent() {
     validationSchema: registerSchema,
     validateOnChange: false,
     validateOnBlur: false,
-    onSubmit
+    onSubmit,
   });
   const { errors, values, isSubmitting, handleSubmit, setFieldValue } = formik;
 
@@ -99,10 +102,10 @@ export default function NewStudent() {
       message="Cambios sin guardar"
       saveAction={{
         onAction: handleSubmit,
-        loading: isSubmitting
+        loading: isSubmitting,
       }}
       discardAction={{
-        onAction: () => {}
+        onAction: () => {},
       }}
     />
   );
@@ -125,7 +128,7 @@ export default function NewStudent() {
 
   return (
     <Page
-      backAction={{ content: 'Alumnos', url: '/admin/students' }}
+      backAction={{ content: "Alumnos", url: "/admin/students" }}
       title="Nuevo Alumno"
       compactTitle
     >
@@ -133,7 +136,7 @@ export default function NewStudent() {
       {modalPrompt}
       <FormikProvider value={values}>
         <Form autoComplete="off" noValidate onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '6rem' }}>
+          <div style={{ marginBottom: "6rem" }}>
             <Layout>
               <Layout.Section>
                 {Object.values(errors).length >= 1 && (
@@ -159,13 +162,13 @@ export default function NewStudent() {
                         label="Nombres"
                         placeholder="Nombres"
                         value={values.firstname}
-                        onChange={(value) => setFieldValue('firstname', value)}
+                        onChange={(value) => setFieldValue("firstname", value)}
                       />
                       <TextField
                         label="Apellidos"
                         placeholder="Apellidos"
                         value={values.lastname}
-                        onChange={(value) => setFieldValue('lastname', value)}
+                        onChange={(value) => setFieldValue("lastname", value)}
                       />
                     </FormLayout.Group>
 
@@ -173,12 +176,12 @@ export default function NewStudent() {
                       label="Numero de cedula"
                       placeholder="Numero de cedula"
                       value={values.documentId}
-                      onChange={(value) => setFieldValue('documentId', value)}
+                      onChange={(value) => setFieldValue("documentId", value)}
                     />
                     <Select
                       label="Curso Aprobado"
                       labelInline
-                      onChange={(value) => setFieldValue('course', value)}
+                      onChange={(value) => setFieldValue("course", value)}
                       options={courses}
                       value={values.course}
                     />
@@ -186,7 +189,7 @@ export default function NewStudent() {
                     <Select
                       label="Resolucion Vigente"
                       labelInline
-                      onChange={(value) => setFieldValue('resolution', value)}
+                      onChange={(value) => setFieldValue("resolution", value)}
                       options={resolutions}
                       value={values.resolution}
                     />
@@ -204,25 +207,25 @@ export default function NewStudent() {
                       label="Empresa"
                       placeholder="Empresa"
                       value={values.company}
-                      onChange={(value) => setFieldValue('company', value)}
+                      onChange={(value) => setFieldValue("company", value)}
                     />
                     <TextField
                       label="Dirección"
                       placeholder="Dirección"
-                      onChange={(value) => setFieldValue('adress', value)}
+                      onChange={(value) => setFieldValue("adress", value)}
                       value={values.address}
                     />
                     <TextField
                       label="Email"
                       placeholder="Email"
-                      onChange={(value) => setFieldValue('email', value)}
+                      onChange={(value) => setFieldValue("email", value)}
                       value={values.email}
                     />
 
                     <TextField
                       label="Telefono"
                       placeholder="Telefono"
-                      onChange={(value) => setFieldValue('phone', value)}
+                      onChange={(value) => setFieldValue("phone", value)}
                       value={values.phone}
                     />
                   </FormLayout>
@@ -238,7 +241,7 @@ export default function NewStudent() {
                     <TextField
                       label="Nota"
                       value={values.notes}
-                      onChange={(value) => setFieldValue('notes', value)}
+                      onChange={(value) => setFieldValue("notes", value)}
                     />
                   </FormLayout>
                 </LegacyCard>

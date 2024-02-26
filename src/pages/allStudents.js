@@ -1,10 +1,10 @@
-import { Page } from '@shopify/polaris';
-import { useNavigate } from 'react-router-dom';
-import ListTable from '../components/ListTable';
+import { Page } from "@shopify/polaris";
+import { useNavigate } from "react-router-dom";
+import ListTable from "../components/ListTable";
 
 export const AllStudents = ({ students }) => {
   const navigate = useNavigate();
-  const handlestudentCreate = () => navigate('new');
+  const handlestudentCreate = () => navigate("new");
   console.log(students);
 
   return (
@@ -12,15 +12,15 @@ export const AllStudents = ({ students }) => {
       title="Alumnos"
       fullWidth
       primaryAction={{
-        content: 'Agregar Alumno',
-        onAction: handlestudentCreate
+        content: "Agregar Alumno",
+        onAction: handlestudentCreate,
       }}
       secondaryActions={[
         {
-          content: 'Importar',
+          content: "Importar",
           disabled: false,
-          helpText: 'You need permission to import products.'
-        }
+          helpText: "You need permission to import products.",
+        },
       ]}
     >
       <ListTable students={students} />

@@ -6,32 +6,39 @@ import {
   Select,
   useIndexResourceState,
   LegacyCard,
-  IndexFilters
-} from '@shopify/polaris';
-import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useFilterStudents } from '../hooks/useFilterStudents';
-import { ListTablePagination } from './ListTablePagination';
+  IndexFilters,
+} from "@shopify/polaris";
+import { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { useFilterStudents } from "../hooks/useFilterStudents";
+import { ListTablePagination } from "./ListTablePagination";
 
 const ListTable = ({ students }) => {
   const resourceName = {
-    singular: 'alumno',
-    plural: 'alumnos'
+    singular: "alumno",
+    plural: "alumnos",
   };
 
-  const { filteredStudents, isFiltering, queryValue, setQueryValue } = useFilterStudents({
-    students
-  });
+  const { filteredStudents, isFiltering, queryValue, setQueryValue } =
+    useFilterStudents({
+      students,
+    });
   const { selectedResources, allResourcesSelected, handleSelectionChange } =
     useIndexResourceState(filteredStudents);
   const navigate = useNavigate();
-  const [taggedWith, setTaggedWith] = useState('');
-  const [sortValue, setSortValue] = useState('today');
-  const handleTaggedWithChange = useCallback((value) => setTaggedWith(value), []);
-  const handleTaggedWithRemove = useCallback(() => setTaggedWith(''), []);
+  const [taggedWith, setTaggedWith] = useState("");
+  const [sortValue, setSortValue] = useState("today");
+  const handleTaggedWithChange = useCallback(
+    (value) => setTaggedWith(value),
+    []
+  );
+  const handleTaggedWithRemove = useCallback(() => setTaggedWith(""), []);
   const handleSortChange = useCallback((value) => setSortValue(value), []);
   const handleOnClick = useCallback((value) => navigate(value), [navigate]);
-  const handleQueryValueRemove = useCallback(() => setQueryValue(''), [setQueryValue]);
+  const handleQueryValueRemove = useCallback(
+    () => setQueryValue(""),
+    [setQueryValue]
+  );
   const handleClearAll = useCallback(() => {
     handleTaggedWithRemove();
     handleQueryValueRemove();
@@ -39,19 +46,19 @@ const ListTable = ({ students }) => {
 
   const promotedBulkActions = [
     {
-      content: 'Editar Alumno',
-      onAction: () => console.log('Todo: implement bulk edit')
+      content: "Editar Alumno",
+      onAction: () => console.log("Todo: implement bulk edit"),
     },
     {
-      content: 'Eliminar Alumno',
-      onAction: () => console.log('Todo: implement bulk delete')
-    }
+      content: "Eliminar Alumno",
+      onAction: () => console.log("Todo: implement bulk delete"),
+    },
   ];
 
   const filters = [
     {
-      key: 'taggedWith',
-      label: 'Tagged with',
+      key: "taggedWith",
+      label: "Tagged with",
       filter: (
         <TextField
           label="Taaged with"
@@ -61,24 +68,24 @@ const ListTable = ({ students }) => {
           labelHidden
         />
       ),
-      shortcut: false
-    }
+      shortcut: false,
+    },
   ];
 
   const appliedFilters = !isEmpty(taggedWith)
     ? [
         {
-          key: 'taggedWith',
-          label: disambiguateLabel('taggedWith', taggedWith),
-          onRemove: handleTaggedWithRemove
-        }
+          key: "taggedWith",
+          label: disambiguateLabel("taggedWith", taggedWith),
+          onRemove: handleTaggedWithRemove,
+        },
       ]
     : [];
 
   const sortOptions = [
-    { label: 'Hoy', value: 'today' },
-    { label: 'Ayer', value: 'yesterday' },
-    { label: 'Ultimos 7 dias', value: 'lastWeek' }
+    { label: "Hoy", value: "today" },
+    { label: "Ayer", value: "yesterday" },
+    { label: "Ultimos 7 dias", value: "lastWeek" },
   ];
 
   const rowMarkup = filteredStudents.map(
@@ -103,9 +110,9 @@ const ListTable = ({ students }) => {
   );
 
   const table = (
-    <div style={{ margin: 'var(--p-space-4) 0' }}>
+    <div style={{ margin: "var(--p-space-4) 0" }}>
       <LegacyCard>
-        <div style={{ padding: '16px', display: 'flex' }}>
+        <div style={{ padding: "16px", display: "flex" }}>
           <div style={{ flex: 1 }}>
             <Filters
               resourceName={resourceName}
@@ -118,7 +125,7 @@ const ListTable = ({ students }) => {
               onClearAll={handleClearAll}
             />
           </div>
-          <div style={{ paddingLeft: '0.25rem' }}>
+          <div style={{ paddingLeft: "0.25rem" }}>
             <Select
               labelInline
               label="Filtrar por"
@@ -131,17 +138,19 @@ const ListTable = ({ students }) => {
         <IndexTable
           resourceName={resourceName}
           itemCount={filteredStudents.length}
-          selectedItemsCount={allResourcesSelected ? 'All' : selectedResources.length}
+          selectedItemsCount={
+            allResourcesSelected ? "All" : selectedResources.length
+          }
           onSelectionChange={handleSelectionChange}
           hasMoreItems
           promotedBulkActions={promotedBulkActions}
           lastColumnSticky
           loading={isFiltering}
           headings={[
-            { title: 'Nombre' },
-            { title: 'Numero de Cedula' },
-            { title: 'Fecha' },
-            { title: 'Resolucion', hidden: false }
+            { title: "Nombre" },
+            { title: "Numero de Cedula" },
+            { title: "Fecha" },
+            { title: "Resolucion", hidden: false },
           ]}
         >
           {rowMarkup}
@@ -155,7 +164,7 @@ const ListTable = ({ students }) => {
 
   function disambiguateLabel(key, value) {
     switch (key) {
-      case 'taggedWith':
+      case "taggedWith":
         return `Tagged with ${value}`;
       default:
         return value;
@@ -166,7 +175,7 @@ const ListTable = ({ students }) => {
     if (Array.isArray(value)) {
       return value.length === 0;
     }
-    return value === '' || value == null;
+    return value === "" || value == null;
   }
 };
 export default ListTable;

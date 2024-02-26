@@ -1,5 +1,5 @@
-import { Form, FormikProvider } from 'formik';
-import { TextField, Stack } from '@shopify/polaris';
+import { Form, FormikProvider } from "formik";
+import { TextField, Stack } from "@shopify/polaris";
 
 export const AddressInfoForm = ({ values, setFieldValue, error }) => (
   <FormikProvider value={values}>
@@ -8,7 +8,7 @@ export const AddressInfoForm = ({ values, setFieldValue, error }) => (
         <TextField
           placeholder="Ej: Calle 12 # ..."
           value={values.address}
-          onChange={(value) => setFieldValue('address', value)}
+          onChange={(value) => setFieldValue("address", value)}
           autoComplete="off"
           error={error.address}
         />

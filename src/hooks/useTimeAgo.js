@@ -2,7 +2,7 @@ const DATE_UNITS = {
   day: 86400,
   hour: 3600,
   minute: 60,
-  second: 1
+  second: 1,
 };
 
 const getSecondsDiff = (timestamp) => (Date.now() - timestamp) / 1000;
@@ -11,7 +11,7 @@ const getUnitAndValueDate = (secondsElapse) => {
   const values = [];
   console.log(values);
   Object.entries(DATE_UNITS).forEach(([unit, secondsInUnit]) => {
-    if (secondsElapse >= secondsInUnit || unit === 'second') {
+    if (secondsElapse >= secondsInUnit || unit === "second") {
       const value = Math.floor(secondsElapse / secondsInUnit) * -1;
       values.push(value, unit);
     }
@@ -33,16 +33,16 @@ const getTimeAgo = (timestamp, locale) => {
 };
 
 export default function useTimeAgo({ timestamp }) {
-  const locale = 'es';
+  const locale = "es";
   const timeAgo = getTimeAgo(timestamp, locale);
 
   const date = new Date(timestamp);
   const formattedDate = new Intl.DateTimeFormat(locale, {
-    month: 'long',
-    day: 'numeric'
+    month: "long",
+    day: "numeric",
   }).format(date);
   return {
     dateTime: formattedDate,
-    timeAgo
+    timeAgo,
   };
 }
