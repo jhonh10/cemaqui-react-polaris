@@ -1,13 +1,24 @@
 import { useCallback, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Button, Card, Stack, Subheading, Text, TextContainer } from '@shopify/polaris';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  Button,
+  Card,
+  LegacyCard,
+  LegacyStack,
+  Stack,
+  Subheading,
+  Text,
+  TextContainer,
+  VerticalStack
+} from '@shopify/polaris';
 import * as Yup from 'yup';
 import { useFormik } from 'formik';
 import { ModalForm } from '../ModalForm';
 import { DocumentIdForm } from './DocumentIdForm';
 import { updateStudentData, validateIfStudentExist } from '../../firebase/client';
 
-export const DocumentIdCard = ({ id, documentId, refetch }) => {
+export const DocumentIdCard = ({ id, documentId }) => {
   const [openModal, setOpenModal] = useState(false);
   const { handleToast } = useOutletContext();
   const toggleOpenModal = useCallback(() => setOpenModal((openModal) => !openModal), []);
@@ -26,15 +37,23 @@ export const DocumentIdCard = ({ id, documentId, refetch }) => {
       })
   });
 
-  const onSubmit = async () => {
-    try {
-      await updateStudentData({ docId: id, data: { documentId: values.documentId } });
-      await refetch();
+  const queryClient = useQueryClient();
+
+  const updateDocumentIdMutation = useMutation({
+    mutationFn: updateStudentData,
+    onSuccess: () => {
+      queryClient.invalidateQueries('studentById');
       setOpenModal(false);
       handleToast('Los datos del alumno han sido actualizados');
-    } catch (error) {
-      console.log(error);
-    }
+    },
+    onError: (error) => handleToast(error)
+  });
+
+  const onSubmit = async () => {
+    await updateDocumentIdMutation.mutateAsync({
+      docId: id,
+      data: { documentId: values.documentId }
+    });
   };
   const formik = useFormik({
     initialValues,
@@ -67,27 +86,12 @@ export const DocumentIdCard = ({ id, documentId, refetch }) => {
   return (
     <>
       {modalForm}
-      <Card.Section>
-        <Stack vertical>
-          <Stack>
-            <Stack.Item fill>
-              <Subheading>Numero de cedula</Subheading>
-            </Stack.Item>
-            <Button plain onClick={toggleOpenModal}>
-              Editar
-            </Button>
-          </Stack>
-          <Stack vertical>
-            <TextContainer>
-              <Stack vertical>
-                <Stack vertical>
-                  <Text>{documentId}</Text>
-                </Stack>
-              </Stack>
-            </TextContainer>
-          </Stack>
-        </Stack>
-      </Card.Section>
+      <LegacyCard.Section
+        title="Numero de cedúla"
+        actions={[{ content: 'Editar', onAction: toggleOpenModal }]}
+      >
+        {documentId}
+      </LegacyCard.Section>
     </>
   );
 };

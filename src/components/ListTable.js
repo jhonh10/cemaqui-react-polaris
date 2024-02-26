@@ -1,11 +1,12 @@
 import {
   TextField,
   IndexTable,
-  TextStyle,
-  Card,
+  Text,
   Filters,
   Select,
-  useIndexResourceState
+  useIndexResourceState,
+  LegacyCard,
+  IndexFilters
 } from '@shopify/polaris';
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -90,9 +91,9 @@ const ListTable = ({ students }) => {
         onClick={() => handleOnClick(id)}
       >
         <IndexTable.Cell>
-          <TextStyle variation="strong">
+          <Text variant="headingSm" as="span">
             {firstname} {lastname}
-          </TextStyle>
+          </Text>
         </IndexTable.Cell>
         <IndexTable.Cell>{documentId}</IndexTable.Cell>
         <IndexTable.Cell>{createdAt}</IndexTable.Cell>
@@ -103,7 +104,7 @@ const ListTable = ({ students }) => {
 
   const table = (
     <div style={{ margin: 'var(--p-space-4) 0' }}>
-      <Card>
+      <LegacyCard>
         <div style={{ padding: '16px', display: 'flex' }}>
           <div style={{ flex: 1 }}>
             <Filters
@@ -146,7 +147,7 @@ const ListTable = ({ students }) => {
           {rowMarkup}
         </IndexTable>
         <ListTablePagination />
-      </Card>
+      </LegacyCard>
     </div>
   );
 

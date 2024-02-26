@@ -1,21 +1,26 @@
 import { useCallback, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Yup from 'yup';
 import { useFormik } from 'formik';
-import { Button, Card, Heading, Stack, Text, TextStyle } from '@shopify/polaris';
+import { LegacyCard, Text } from '@shopify/polaris';
 import { ModalForm } from '../ModalForm';
 import { NotesForm } from './NotesForm';
 import { updateStudentData } from '../../firebase/client';
 
-export const NotesCard = ({ notes, id, refetch }) => {
+export const NotesCard = ({ notes, id }) => {
   const [openModal, setOpenModal] = useState(false);
   const toggleOpenModal = useCallback(() => setOpenModal((openModal) => !openModal), []);
   const { handleToast } = useOutletContext();
 
   const studentNotes = notes ? (
-    <Text truncate>{notes}</Text>
+    <Text truncate as="span">
+      {notes}
+    </Text>
   ) : (
-    <TextStyle variation="subdued">No hay notas sobre este alumno</TextStyle>
+    <Text color="subdued" as="span">
+      No hay notas sobre este alumno
+    </Text>
   );
 
   const initialValues = {
@@ -26,15 +31,26 @@ export const NotesCard = ({ notes, id, refetch }) => {
     notes: Yup.string()
   });
 
-  const onSubmit = async () => {
-    try {
-      await updateStudentData({ docId: id, data: { notes: values.notes } });
-      await refetch();
+  const queryClient = useQueryClient();
+
+  const updateNotesMutation = useMutation({
+    mutationFn: updateStudentData,
+    onSuccess: () => {
+      queryClient.invalidateQueries('studentById');
       setOpenModal(false);
       handleToast('Los datos del alumno han sido actualizados');
-    } catch (error) {
+    },
+    onError: (error) => {
+      setOpenModal(false);
       handleToast(error);
     }
+  });
+
+  const onSubmit = async () => {
+    await updateNotesMutation.mutateAsync({
+      docId: id,
+      data: { notes: values.notes }
+    });
   };
   const formik = useFormik({
     initialValues,
@@ -65,19 +81,9 @@ export const NotesCard = ({ notes, id, refetch }) => {
   return (
     <>
       {modalForm}
-      <Card sectioned>
-        <Stack vertical>
-          <Stack>
-            <Stack.Item fill>
-              <Heading>Notas</Heading>
-            </Stack.Item>
-            <Button plain onClick={toggleOpenModal}>
-              Editar
-            </Button>
-          </Stack>
-          {studentNotes}
-        </Stack>
-      </Card>
+      <LegacyCard title="Notas" actions={[{ content: 'Editar', onAction: toggleOpenModal }]}>
+        <LegacyCard.Section>{studentNotes}</LegacyCard.Section>
+      </LegacyCard>
     </>
   );
 };

@@ -1,11 +1,11 @@
 import { Form, FormikProvider } from 'formik';
-import { Stack, Select } from '@shopify/polaris';
+import { Select, LegacyStack } from '@shopify/polaris';
 import { courses, resolutions } from '../../json/coursesData';
 
 export const AddCourseForm = ({ values, setFieldValue, error }) => (
   <FormikProvider value={values}>
     <Form autoComplete="off" noValidate>
-      <Stack vertical>
+      <LegacyStack vertical>
         <Select
           label="Curso Aprobado"
           labelInline
@@ -23,7 +23,7 @@ export const AddCourseForm = ({ values, setFieldValue, error }) => (
           value={values.resolution}
           error={error.resolution}
         />
-      </Stack>
+      </LegacyStack>
     </Form>
   </FormikProvider>
 );

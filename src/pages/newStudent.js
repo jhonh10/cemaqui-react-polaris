@@ -1,26 +1,26 @@
 import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useOutletContext } from 'react-router-dom';
+import ReactRouterPrompt from 'react-router-prompt';
 import * as Yup from 'yup';
 import { Form, FormikProvider, useFormik } from 'formik';
 import {
   Page,
-  Card,
   Layout,
   FormLayout,
   TextField,
   ContextualSaveBar,
   Banner,
   List,
-  Select
+  Select,
+  LegacyCard
 } from '@shopify/polaris';
 import ModalConfirm from '../components/ModalConfirm';
-import { useCallbackPrompt } from '../hooks/useCallBackPropmt';
 import { addStudent } from '../firebase/client';
 import { courses, resolutions } from '../json/coursesData';
 
 export default function NewStudent() {
   const [isDirty, setIsDirty] = useState(true);
-  const [showPrompt, confirmNavigation, cancelNavigation] = useCallbackPrompt(isDirty);
   const { handleToast } = useOutletContext();
   const navigate = useNavigate();
 
@@ -65,15 +65,21 @@ export default function NewStudent() {
     return () => clearTimeout(timeOut);
   }
 
-  const handleOnSubmit = async () => {
-    const response = await addStudent(values);
-    await navigateAfterTwoSeconds(`/admin/students/${response}`);
-    setIsDirty(false);
-    handleToast('Alumno creado');
+  const addStudentMutation = useMutation({
+    mutationFn: addStudent,
+    onSuccess: async (data) => {
+      await navigateAfterTwoSeconds(`/admin/students/${data}`);
+      setIsDirty(false);
+      handleToast('Alumno creado');
+    }
+  });
+
+  const handleOnSubmit = () => {
+    addStudentMutation.mutateAsync(values);
   };
-  const onSubmit = async () => {
+  const onSubmit = () => {
     try {
-      await handleOnSubmit();
+      handleOnSubmit();
     } catch (error) {
       handleToast(error);
     }
@@ -101,21 +107,25 @@ export default function NewStudent() {
     />
   );
 
-  const modalPrompt = showPrompt ? (
-    <ModalConfirm
-      open={showPrompt}
-      confirmAction={confirmNavigation}
-      cancelAction={cancelNavigation}
-      title="¿Salir de la página sin guardar los cambios?"
-      primaryActionTitle="Abandonar pagina"
-      secondaryActionTitle="Permanecer"
-      bodyText="Al salir de esta página, se eliminarán todos los cambios sin guardar."
-    />
-  ) : null;
+  const modalPrompt = (
+    <ReactRouterPrompt when={isDirty}>
+      {({ isActive, onConfirm, onCancel }) => (
+        <ModalConfirm
+          open={isActive}
+          confirmAction={onConfirm}
+          cancelAction={onCancel}
+          title="¿Salir de la página sin guardar los cambios?"
+          primaryActionTitle="Abandonar pagina"
+          secondaryActionTitle="Permanecer"
+          bodyText="Al salir de esta página, se eliminarán todos los cambios sin guardar."
+        />
+      )}
+    </ReactRouterPrompt>
+  );
 
   return (
     <Page
-      breadcrumbs={[{ content: 'Alumnos', url: '/admin/students' }]}
+      backAction={{ content: 'Alumnos', url: '/admin/students' }}
       title="Nuevo Alumno"
       compactTitle
     >
@@ -142,7 +152,7 @@ export default function NewStudent() {
                 title="Información principal del alumno"
                 // description="Shopify and your customers will use this information to contact you."
               >
-                <Card sectioned>
+                <LegacyCard sectioned>
                   <FormLayout>
                     <FormLayout.Group>
                       <TextField
@@ -181,14 +191,14 @@ export default function NewStudent() {
                       value={values.resolution}
                     />
                   </FormLayout>
-                </Card>
+                </LegacyCard>
               </Layout.AnnotatedSection>
               <Layout.AnnotatedSection
                 id="StudentDetails"
                 title="Información adicional del alumno"
                 // description="Shopify and your customers will use this information to contact you."
               >
-                <Card sectioned>
+                <LegacyCard sectioned>
                   <FormLayout>
                     <TextField
                       label="Empresa"
@@ -216,14 +226,14 @@ export default function NewStudent() {
                       value={values.phone}
                     />
                   </FormLayout>
-                </Card>
+                </LegacyCard>
               </Layout.AnnotatedSection>
               <Layout.AnnotatedSection
                 id="studentAdditionalInfo"
                 title="Notas"
                 description="Agrega notas sobre tu alumno"
               >
-                <Card sectioned>
+                <LegacyCard sectioned>
                   <FormLayout>
                     <TextField
                       label="Nota"
@@ -231,7 +241,7 @@ export default function NewStudent() {
                       onChange={(value) => setFieldValue('notes', value)}
                     />
                   </FormLayout>
-                </Card>
+                </LegacyCard>
               </Layout.AnnotatedSection>
             </Layout>
           </div>

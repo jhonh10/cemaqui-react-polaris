@@ -1,21 +1,24 @@
-import { Button, Card, Stack, Subheading, Text, TextContainer, TextStyle } from '@shopify/polaris';
+import { LegacyCard, LegacyStack, Text, VerticalStack } from '@shopify/polaris';
 import React, { useCallback, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Yup from 'yup';
 import { useFormik } from 'formik';
 import { AddressInfoForm } from './AddressInfoForm';
 import { updateStudentData } from '../../firebase/client';
 import { ModalForm } from '../ModalForm';
 
-export const AdressInfoCard = ({ address, id, refetch }) => {
+export const AdressInfoCard = ({ address, id }) => {
   const [openModal, setOpenModal] = useState(false);
   const toggleOpenModal = useCallback(() => setOpenModal((openModal) => !openModal), []);
   const { handleToast } = useOutletContext();
 
   const studentAddress = address ? (
-    <Text>{address}</Text>
+    <Text as="span">{address}</Text>
   ) : (
-    <TextStyle variation="subdued">No se ingreso una dirección</TextStyle>
+    <Text color="subdued" as="span">
+      No se ingreso una dirección
+    </Text>
   );
 
   const initialValues = {
@@ -25,16 +28,22 @@ export const AdressInfoCard = ({ address, id, refetch }) => {
   const registerSchema = Yup.object().shape({
     address: Yup.string()
   });
-
-  const onSubmit = async () => {
-    try {
-      await updateStudentData({ docId: id, data: { address: values.address } });
-      await refetch();
+  const queryClient = useQueryClient();
+  const updateAddresMutation = useMutation({
+    mutationFn: updateStudentData,
+    onSuccess: () => {
+      queryClient.invalidateQueries('studentById');
       setOpenModal(false);
       handleToast('Los datos del alumno han sido actualizados');
-    } catch (error) {
-      handleToast(error);
-    }
+    },
+    onError: (error) => handleToast(error)
+  });
+
+  const onSubmit = async () => {
+    await updateAddresMutation.mutateAsync({
+      docId: id,
+      data: { address: values.address }
+    });
   };
   const formik = useFormik({
     initialValues,
@@ -64,28 +73,14 @@ export const AdressInfoCard = ({ address, id, refetch }) => {
   return (
     <>
       {modalForm}
-      <Card.Section>
-        <Stack vertical>
-          <Stack>
-            <Stack.Item fill>
-              <Subheading>Dirección predeterminada</Subheading>
-            </Stack.Item>
-            <Button plain onClick={toggleOpenModal}>
-              Gestionar
-            </Button>
-          </Stack>
-          <Stack vertical>
-            <TextContainer spacing="tight">
-              <Stack vertical>
-                <Stack vertical spacing="tight">
-                  {studentAddress}
-                  <Text>Bogota, Colombia</Text>
-                </Stack>
-              </Stack>
-            </TextContainer>
-          </Stack>
-        </Stack>
-      </Card.Section>
+      <LegacyCard.Section
+        title="Direccion Predeterminada"
+        actions={[{ content: 'Gestionar', onAction: toggleOpenModal }]}
+      >
+        <VerticalStack>
+          <LegacyStack vertical>{studentAddress}</LegacyStack>
+        </VerticalStack>
+      </LegacyCard.Section>
     </>
   );
 };

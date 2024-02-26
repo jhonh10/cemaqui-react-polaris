@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Page, Card, Layout, PageActions } from '@shopify/polaris';
+import { useMutation } from '@tanstack/react-query';
+import { Page, Layout, PageActions, LegacyCard } from '@shopify/polaris';
 import ModalConfirm from '../components/ModalConfirm';
 import { deleteStudent } from '../firebase/client';
 import { NotesCard } from '../components/studentDetails/NotesCard';
@@ -10,7 +11,7 @@ import { AdressInfoCard } from '../components/studentDetails/AdressInfoCard';
 import { CoursesCard } from '../components/studentDetails/CoursesCard';
 import useTimeAgo from '../hooks/useTimeAgo';
 
-export const StudentDetails = ({ studentData, refetch }) => {
+export const StudentDetails = ({ studentData }) => {
   const navigate = useNavigate();
   const [openModal, setOpenModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -20,10 +21,18 @@ export const StudentDetails = ({ studentData, refetch }) => {
   // const { dateTime, timeAgo } = useTimeAgo(timestamp);
   // console.log(dateTime, timeAgo);
 
+  const deleteStudentMutation = useMutation({
+    mutationFn: deleteStudent,
+    onSuccess: () => {
+      navigate('/admin/students');
+      setLoading(false);
+      setOpenModal(false);
+    }
+  });
+
   const handleDelete = async () => {
-    await deleteStudent(id, setLoading);
-    navigate('/admin/students');
-    setOpenModal(false);
+    setLoading(true);
+    await deleteStudentMutation.mutateAsync(id, setLoading);
   };
 
   const modalPrompt = (
@@ -39,10 +48,9 @@ export const StudentDetails = ({ studentData, refetch }) => {
     />
   );
 
-  console.log(studentData);
   return (
     <Page
-      breadcrumbs={[{ content: 'Alumnos', url: '/admin/students' }]}
+      backAction={{ content: 'Alumnos', url: '/admin/students' }}
       title={`${firstname} ${lastname}`}
       pagination={{
         hasPrevious: true,
@@ -53,15 +61,15 @@ export const StudentDetails = ({ studentData, refetch }) => {
       {modalPrompt}
       <Layout>
         <Layout.Section>
-          <CoursesCard courses={courses} refetch={refetch} id={id} />
+          <CoursesCard courses={courses} id={id} />
         </Layout.Section>
         <Layout.Section secondary>
-          <NotesCard notes={notes} id={id} refetch={refetch} />
-          <Card>
-            <DocumentIdCard documentId={documentId} refetch={refetch} id={id} />
-            <ContactInfoCard email={email} phone={phone} refetch={refetch} id={id} />
-            <AdressInfoCard address={address} refetch={refetch} id={id} />
-          </Card>
+          <NotesCard notes={notes} id={id} />
+          <LegacyCard>
+            <DocumentIdCard documentId={documentId} id={id} />
+            <ContactInfoCard email={email} phone={phone} id={id} />
+            <AdressInfoCard address={address} id={id} />
+          </LegacyCard>
         </Layout.Section>
         <Layout.Section>
           <PageActions

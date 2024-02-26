@@ -1,14 +1,15 @@
-import { Badge, Button, Card, List, Stack, TextStyle } from '@shopify/polaris';
+import { Badge, LegacyCard, List, Text } from '@shopify/polaris';
 import { useFormik } from 'formik';
 import { useCallback, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Yup from 'yup';
 import { formatDate, updateStudentCourses, updateStudentData } from '../../firebase/client';
 import ModalConfirm from '../ModalConfirm';
 import { ModalForm } from '../ModalForm';
 import { AddCourseForm } from './AddCourseForm';
 
-export const CoursesCard = ({ courses, id, refetch }) => {
+export const CoursesCard = ({ courses, id }) => {
   const [openModal, setOpenModal] = useState(false);
   const [openModalPropmt, setOpenModalPropmt] = useState(false);
   const [courseToRemove, setCourseToRemove] = useState({
@@ -29,19 +30,34 @@ export const CoursesCard = ({ courses, id, refetch }) => {
     resolution: Yup.string().required('Seleccione una resolucion')
   });
 
-  const onSubmit = async () => {
-    try {
-      await updateStudentCourses({
-        docId: id,
-        data: { name: values.course, date: new Date(), status: 'Vigente' }
-      });
-      await refetch();
-      handleReset();
+  const queryClient = useQueryClient();
+
+  const updateStudentMutation = useMutation({
+    mutationFn: updateStudentCourses,
+    onSuccess: () => {
+      queryClient.invalidateQueries('studentById');
       setOpenModal(false);
       handleToast('Los datos del alumno han sido actualizados');
-    } catch (error) {
-      handleToast(error);
-    }
+      handleReset();
+    },
+    onError: (error) => handleToast(error)
+  });
+
+  const deleteCourseMutation = useMutation({
+    mutationFn: updateStudentData,
+    onSuccess: () => {
+      setLoading(false);
+      setOpenModalPropmt(false);
+      handleToast('Cursos actualizados correctamente');
+    },
+    onError: (error) => handleToast(error)
+  });
+
+  const onSubmit = async () => {
+    await updateStudentMutation.mutateAsync({
+      docId: id,
+      data: { name: values.course, date: new Date(), status: 'Vigente' }
+    });
   };
   const formik = useFormik({
     initialValues,
@@ -59,16 +75,11 @@ export const CoursesCard = ({ courses, id, refetch }) => {
 
   const removeCourse = async (fieldId) => {
     setLoading(true);
-    try {
-      courses.splice(fieldId, 1);
-      await updateStudentData({ docId: id, data: { courses } });
-      setLoading(false);
-      refetch();
-      setOpenModalPropmt(false);
-    } catch (error) {
-      setLoading(false);
-      console.log(error);
-    }
+    courses.splice(fieldId, 1);
+    await deleteCourseMutation.mutateAsync({
+      docId: id,
+      data: { courses }
+    });
   };
 
   const handleDelete = (course, index) => {
@@ -104,31 +115,34 @@ export const CoursesCard = ({ courses, id, refetch }) => {
     <>
       {modalPrompt}
       {modalForm}
-      <Card
+      <LegacyCard
         title="Cursos realizados"
         primaryFooterAction={{ content: 'Agregar curso', onAction: toggleOpenModal }}
       >
         {courses.map((course, index) => {
           const date = formatDate(course.date.toDate(), 'es', { dateStyle: 'long' });
           return (
-            <Card.Section subdued key={index}>
-              <Stack vertical spacing="tight">
-                <Stack spacing="tight" distribution="equalSpacing">
-                  <Stack.Item fill>
-                    <List.Item>
-                      {course.name} <Badge status="success">{course.status}</Badge>
-                    </List.Item>
-                    <TextStyle variation="subdued">{`El ${date}`}</TextStyle>
-                  </Stack.Item>
-                  <Button plain destructive onClick={() => handleDelete(course, index)}>
-                    Eliminar
-                  </Button>
-                </Stack>
-              </Stack>
-            </Card.Section>
+            <LegacyCard.Section
+              subdued
+              key={index}
+              actions={[
+                {
+                  content: 'Eliminar',
+                  destructive: true,
+                  onAction: () => handleDelete(course, index)
+                }
+              ]}
+            >
+              <List>
+                <List.Item>
+                  {course.name} <Badge status="success">{course.status}</Badge>
+                </List.Item>
+                <Text color="subdued" as="span">{`El ${date}`}</Text>
+              </List>
+            </LegacyCard.Section>
           );
         })}
-      </Card>
+      </LegacyCard>
     </>
   );
 };

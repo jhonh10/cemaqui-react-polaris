@@ -41,7 +41,11 @@ const mapStudentFromFirebase = (doc) => {
 };
 
 export async function getStudents() {
-  const studentsColl = query(collection(db, 'Alumnos'), orderBy('expeditionDate'), limit(50));
+  const studentsColl = query(
+    collection(db, 'Alumnos'),
+    orderBy('expeditionDate', 'desc'),
+    limit(50)
+  );
   const studentSnapShot = await getDocs(studentsColl);
   const lastVisible = studentSnapShot.docs[studentSnapShot.docs.length - 1];
   if (studentSnapShot) {
