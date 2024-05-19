@@ -2,11 +2,15 @@ import { Page } from "@shopify/polaris";
 import { useNavigate } from "react-router-dom";
 import ListTable from "../components/ListTable";
 
-export const AllStudents = ({ students }) => {
+export const AllStudents = ({
+  students,
+  setPage,
+  page,
+  hasMore,
+  setPageAction,
+}) => {
   const navigate = useNavigate();
   const handlestudentCreate = () => navigate("new");
-  console.log(students);
-
   return (
     <Page
       title="Alumnos"
@@ -23,7 +27,13 @@ export const AllStudents = ({ students }) => {
         },
       ]}
     >
-      <ListTable students={students} />
+      <ListTable
+        students={students}
+        setPage={setPage}
+        page={page}
+        hasMore={hasMore}
+        setPageAction={setPageAction}
+      />
     </Page>
   );
 };
