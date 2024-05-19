@@ -8,6 +8,5 @@ export const useFetchStudentById = (studentId) => {
     refetchOnWindowFocus: false,
     cacheTime: 0,
   });
-
   return { studentData: data, isLoading, isFetching, isError, error };
 };
