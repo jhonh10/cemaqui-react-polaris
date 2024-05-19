@@ -1,28 +1,29 @@
+import { useState } from "react";
 import { LegacyStack, Pagination, Stack } from "@shopify/polaris";
-import React from "react";
-import { getStudents, nextPage } from "../firebase/client";
 
-export const ListTablePagination = () => (
-  <div
-    style={{
-      margin: "auto",
-      padding:
-        "var(--p-space-3) var(--p-space-4) var(--p-space-5) var(--p-space-4)",
-    }}
-  >
-    <LegacyStack distribution="center">
-      <Pagination
-        hasPrevious
-        previousKeys={[74]}
-        previousTooltip="j"
-        onPrevious={() => {
-          console.log("Previous");
-        }}
-        hasNext
-        nextKeys={[75]}
-        nextTooltip="k"
-        onNext={async () => nextPage()}
-      />
-    </LegacyStack>
-  </div>
-);
+export const ListTablePagination = ({ setPage, hasMore, setPageAction }) => {
+  const handlePrevious = async () => {
+    setPage((prev) => prev - 1);
+  };
+  const handleNext = () => {
+    setPage((prev) => prev + 1);
+  };
+  return (
+    <div
+      style={{
+        margin: "auto",
+        padding:
+          "var(--p-space-3) var(--p-space-4) var(--p-space-5) var(--p-space-4)",
+      }}
+    >
+      <LegacyStack distribution="center">
+        <Pagination
+          hasPrevious={false}
+          onPrevious={handlePrevious}
+          hasNext={hasMore}
+          onNext={handleNext}
+        />
+      </LegacyStack>
+    </div>
+  );
+};
