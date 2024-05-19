@@ -5,7 +5,7 @@ import {
   Navigation,
   Toast,
 } from "@shopify/polaris";
-import { HomeMinor, CustomersMinor } from "@shopify/polaris-icons";
+import { HomeIcon, PersonIcon } from "@shopify/polaris-icons";
 import { useIsFetching } from "@tanstack/react-query";
 import { useState, useCallback, useRef } from "react";
 import { Outlet, useLocation } from "react-router-dom";
@@ -97,13 +97,13 @@ export default function LayoutPage() {
           {
             url: "/admin",
             label: "Inicio",
-            icon: HomeMinor,
+            icon: HomeIcon,
             exactMatch: true,
           },
           {
             url: "/admin/students",
             label: "Alumnos",
-            icon: CustomersMinor,
+            icon: PersonIcon,
             badge: "15",
           },
         ]}
