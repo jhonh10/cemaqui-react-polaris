@@ -40,29 +40,42 @@ const mapStudentFromFirebase = (doc) => {
   };
 };
 
-export async function getStudents() {
-  const studentsColl = query(
-    collection(db, "Alumnos"),
-    orderBy("expeditionDate", "desc"),
-    limit(50)
-  );
-  const studentSnapShot = await getDocs(studentsColl);
-  const lastVisible = studentSnapShot.docs[studentSnapShot.docs.length - 1];
-  if (studentSnapShot) {
-    const studentList = studentSnapShot.docs.map(mapStudentFromFirebase);
-    return { studentList, lastVisible };
+export async function getStudents(page, lastVisible, setLastVisible) {
+  const PAGE_SIZE = 20;
+  if (page === 1) {
+    const studentsColl = query(
+      collection(db, "Alumnos"),
+      orderBy("expeditionDate", "desc"),
+      limit(PAGE_SIZE)
+    );
+    const studentSnapShot = await getDocs(studentsColl);
+    const lastVisible = studentSnapShot.docs[studentSnapShot.docs.length - 1];
+    const hasMore = studentSnapShot.docs.length === PAGE_SIZE;
+    setLastVisible(lastVisible);
+    if (studentSnapShot) {
+      const studentList = studentSnapShot.docs.map(mapStudentFromFirebase);
+      return { studentList, hasMore };
+    }
+    return null;
+  }
+  if (page > 1) {
+    const nextData = query(
+      collection(db, "Alumnos"),
+      orderBy("expeditionDate", "desc"),
+      startAfter(lastVisible),
+      limit(20)
+    );
+    const data = await getDocs(nextData);
+    const lastVisibleNext = data.docs[data.docs.length - 1];
+    const hasMore = data.docs.length === PAGE_SIZE;
+    setLastVisible(lastVisibleNext);
+    if (data) {
+      const studentList = data.docs.map(mapStudentFromFirebase);
+      return { studentList, hasMore };
+    }
+    return null;
   }
   return null;
-}
-
-export async function nextPage() {
-  const { lastVisible } = await getStudents();
-  return query(
-    collection(db, "Alumnos"),
-    orderBy("expeditionDate"),
-    startAfter(lastVisible),
-    limit(50)
-  );
 }
 
 export async function getStudentById(studentId) {
