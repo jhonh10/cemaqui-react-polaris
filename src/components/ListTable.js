@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { useFilterStudents } from "../hooks/useFilterStudents";
 import { ListTablePagination } from "./ListTablePagination";
 
-const ListTable = ({ students }) => {
+const ListTable = ({ students, page, setPage, hasMore, setPageAction }) => {
   const resourceName = {
     singular: "alumno",
     plural: "alumnos",
@@ -155,7 +155,7 @@ const ListTable = ({ students }) => {
         >
           {rowMarkup}
         </IndexTable>
-        <ListTablePagination />
+        <ListTablePagination page={page} setPage={setPage} hasMore={hasMore} setPageAction={setPageAction}/>
       </LegacyCard>
     </div>
   );
