@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@shopify/polaris": "^10.0.0",
+    "@shopify/polaris-icons": "^9.0.1",
     "@shopify/react-i18n": "^7.8.0",
     "@tanstack/react-query": "^4.12.0",
     "@testing-library/jest-dom": "^5.16.4",
