@@ -25,6 +25,7 @@ const ListTable = ({
   lastVisible,
   setFirstVisible,
   setLastVisible,
+  isReturningFromDetails, // Nuevo prop
 }) => {
   const resourceName = {
     singular: "alumno",
@@ -38,7 +39,8 @@ const ListTable = ({
     });
 
   // Estado de carga combinado
-  const isLoading = isFiltering || isPreviousData;
+  // Si estamos volviendo de detalles, no mostrar spinner aunque esté cargando
+  const isLoading = (isFiltering || isPreviousData) && !isReturningFromDetails;
 
   const { selectedResources, allResourcesSelected, handleSelectionChange } =
     useIndexResourceState(filteredStudents);

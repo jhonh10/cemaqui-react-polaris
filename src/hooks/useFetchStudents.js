@@ -67,6 +67,19 @@ export const useFetchStudents = () => {
     }
   }, [searchTerm, queryClient, page]);
 
+  // Efecto para manejar el retorno desde detalles
+  useEffect(() => {
+    // Verificar si hay un estado de navegación que indique que venimos de detalles
+    const navState = window.history.state?.usr;
+    if (navState?.fromList) {
+      console.log("🔄 Detectado retorno desde detalles, manteniendo caché");
+      
+      // Evitamos invalidar la caché al volver desde detalles
+      // Esto hace que se use la caché existente en lugar de recargar los datos
+      queryClient.cancelQueries(["students", page]);
+    }
+  }, [queryClient, page]);
+
   // Query para búsqueda
   const searchQuery = useQuery({
     queryKey: ["studentsSearch", searchTerm],

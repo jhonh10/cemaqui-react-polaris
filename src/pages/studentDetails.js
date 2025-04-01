@@ -58,6 +58,15 @@ export const StudentDetails = ({ studentData }) => {
     return backUrl;
   };
 
+  const handleBack = () => {
+    navigate(getBackUrl(), {
+      state: {
+        fromList: true, // Mantenemos esto para detectar que venimos de la lista
+        returnToPage: currentPage, // Añadimos esto como referencia adicional
+      },
+    });
+  };
+
   const backUrl = getBackUrl();
 
   const deleteStudentMutation = useMutation({
@@ -89,7 +98,16 @@ export const StudentDetails = ({ studentData }) => {
 
   return (
     <Page
-      backAction={{ content: "Alumnos", url: backUrl }}
+      backAction={{
+        content: "Volver",
+        onAction: () =>
+          navigate(getBackUrl(), {
+            state: {
+              fromList: true,
+              returnToPage: currentPage,
+            },
+          }),
+      }}
       title={`${firstname} ${lastname}`}
       pagination={{
         hasPrevious: true,

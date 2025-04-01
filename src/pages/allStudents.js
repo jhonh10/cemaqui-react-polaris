@@ -14,6 +14,8 @@ export const AllStudents = ({
   lastVisible,
   setFirstVisible,
   setLastVisible,
+  isLoading,
+  isReturningFromDetails,
 }) => {
   const navigate = useNavigate();
   
@@ -46,6 +48,7 @@ export const AllStudents = ({
         lastVisible={lastVisible}
         setFirstVisible={setFirstVisible}
         setLastVisible={setLastVisible}
+        isReturningFromDetails={isReturningFromDetails}
       />
     </Page>
   );
