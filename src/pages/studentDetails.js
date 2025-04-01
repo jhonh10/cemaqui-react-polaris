@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { Page, Layout, PageActions, LegacyCard } from "@shopify/polaris";
 import ModalConfirm from "../components/ModalConfirm";
@@ -13,6 +13,7 @@ import useTimeAgo from "../hooks/useTimeAgo";
 
 export const StudentDetails = ({ studentData }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [openModal, setOpenModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const {
@@ -26,9 +27,36 @@ export const StudentDetails = ({ studentData }) => {
     address,
     id,
   } = studentData;
-  // const timestamp = new Date();
-  // const { dateTime, timeAgo } = useTimeAgo(timestamp);
-  // console.log(dateTime, timeAgo);
+
+  const { state } = location;
+  const fromList = state?.fromList;
+  const currentPage = state?.currentPage;
+  const currentQuery = state?.currentQuery;
+
+  const getBackUrl = () => {
+    let backUrl = "/admin/students";
+
+    if (!fromList) return backUrl;
+
+    const params = new URLSearchParams();
+
+    if (currentPage > 1) {
+      params.set("page", currentPage.toString());
+    }
+
+    if (currentQuery) {
+      params.set("query", currentQuery);
+    }
+
+    const queryString = params.toString();
+    if (queryString) {
+      backUrl = `${backUrl}?${queryString}`;
+    }
+
+    return backUrl;
+  };
+
+  const backUrl = getBackUrl();
 
   const deleteStudentMutation = useMutation({
     mutationFn: deleteStudent,
@@ -59,7 +87,7 @@ export const StudentDetails = ({ studentData }) => {
 
   return (
     <Page
-      backAction={{ content: "Alumnos", url: "/admin/students" }}
+      backAction={{ content: "Alumnos", url: backUrl }}
       title={`${firstname} ${lastname}`}
       pagination={{
         hasPrevious: true,
