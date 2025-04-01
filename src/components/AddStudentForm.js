@@ -1,0 +1,212 @@
+import { useNavigate, useOutletContext } from "react-router-dom";
+import * as Yup from "yup";
+import {
+  Banner,
+  FormLayout,
+  Layout,
+  LegacyCard,
+  List,
+  Select,
+  TextField,
+} from "@shopify/polaris";
+import { useMutation } from "@tanstack/react-query";
+import { Form, FormikProvider, useFormik } from "formik";
+import { addStudent } from "../firebase/client";
+import { courses, resolutions } from "../json/coursesData";
+
+function AddStudentForm({ setIsDirty }) {
+  const navigate = useNavigate();
+  const { handleToast } = useOutletContext();
+
+  const initialValues = {
+    firstname: "",
+    lastname: "",
+    documentId: "",
+    course: "",
+    resolution: "",
+    company: "",
+    address: "",
+    phone: "",
+    email: "",
+  };
+
+  const registerSchema = Yup.object().shape({
+    firstname: Yup.string()
+      .min(2, "Muy Corto!")
+      .max(50, "Muy Largo!")
+      .required("Nombre es requerido"),
+    lastname: Yup.string()
+      .min(2, "Muy Corto!")
+      .max(50, "Muy Largo!")
+      .required("ingrese un apellido"),
+    documentId: Yup.string()
+      .matches(/^[0-9]+$/, "Deben ser solo numeros")
+      .min(5, "No parece un documento valido")
+      .required("Cedula es requerida"),
+    course: Yup.string().required("Seleccione un curso"),
+    resolution: Yup.string().required("Seleccione una resolucion"),
+    company: Yup.string(),
+    address: Yup.string(),
+    phone: Yup.string().matches(
+      /^[0-9]+$/,
+      "Ingrese un numero de telefono valido"
+    ),
+    email: Yup.string().email("No parece un email valido"),
+    notes: Yup.string().max(50, "Ingrese una nota maximo de 50 caracteres"),
+  });
+
+  async function navigateAfterTwoSeconds(url) {
+    const timeOut = setTimeout(() => {
+      navigate(url);
+    }, 200);
+    return () => clearTimeout(timeOut);
+  }
+
+  const addStudentMutation = useMutation({
+    mutationFn: addStudent,
+    onSuccess: async (data) => {
+      await navigateAfterTwoSeconds(`/admin/students/${data}`);
+      setIsDirty(false);
+      handleToast("Alumno creado");
+    },
+  });
+
+  const handleOnSubmit = () => {
+    addStudentMutation.mutateAsync(values);
+  };
+  const onSubmit = () => {
+    try {
+      handleOnSubmit();
+    } catch (error) {
+      handleToast(error);
+    }
+  };
+
+  const formik = useFormik({
+    initialValues,
+    validationSchema: registerSchema,
+    validateOnChange: false,
+    validateOnBlur: false,
+    onSubmit,
+  });
+  const { errors, values, handleSubmit, setFieldValue, isSubmitting } = formik;
+  return (
+    <FormikProvider value={values}>
+      <Form autoComplete="off" noValidate onSubmit={handleSubmit}>
+        <div style={{ marginBottom: "6rem" }}>
+          <Layout>
+            <Layout.Section>
+              {Object.values(errors).length >= 1 && (
+                <Banner
+                  title="Para guardar este alumno, se debe realizar 1 cambio"
+                  status="critical"
+                >
+                  {Object.values(errors).map((error, index) => (
+                    <List.Item key={index}>{error}</List.Item>
+                  ))}
+                </Banner>
+              )}
+            </Layout.Section>
+            <Layout.AnnotatedSection
+              id="StudentMainInfo"
+              title="Información principal del alumno"
+              // description="Shopify and your customers will use this information to contact you."
+            >
+              <LegacyCard sectioned>
+                <FormLayout>
+                  <FormLayout.Group>
+                    <TextField
+                      label="Nombres"
+                      placeholder="Nombres"
+                      value={values.firstname}
+                      onChange={(value) => setFieldValue("firstname", value)}
+                    />
+                    <TextField
+                      label="Apellidos"
+                      placeholder="Apellidos"
+                      value={values.lastname}
+                      onChange={(value) => setFieldValue("lastname", value)}
+                    />
+                  </FormLayout.Group>
+
+                  <TextField
+                    label="Numero de cedula"
+                    placeholder="Numero de cedula"
+                    value={values.documentId}
+                    onChange={(value) => setFieldValue("documentId", value)}
+                  />
+                  <Select
+                    label="Curso Aprobado"
+                    labelInline
+                    onChange={(value) => setFieldValue("course", value)}
+                    options={courses}
+                    value={values.course}
+                  />
+
+                  <Select
+                    label="Resolucion Vigente"
+                    labelInline
+                    onChange={(value) => setFieldValue("resolution", value)}
+                    options={resolutions}
+                    value={values.resolution}
+                  />
+                </FormLayout>
+              </LegacyCard>
+            </Layout.AnnotatedSection>
+            <Layout.AnnotatedSection
+              id="StudentDetails"
+              title="Información adicional del alumno"
+              // description="Shopify and your customers will use this information to contact you."
+            >
+              <LegacyCard sectioned>
+                <FormLayout>
+                  <TextField
+                    label="Empresa"
+                    placeholder="Empresa"
+                    value={values.company}
+                    onChange={(value) => setFieldValue("company", value)}
+                  />
+                  <TextField
+                    label="Dirección"
+                    placeholder="Dirección"
+                    onChange={(value) => setFieldValue("adress", value)}
+                    value={values.address}
+                  />
+                  <TextField
+                    label="Email"
+                    placeholder="Email"
+                    onChange={(value) => setFieldValue("email", value)}
+                    value={values.email}
+                  />
+
+                  <TextField
+                    label="Telefono"
+                    placeholder="Telefono"
+                    onChange={(value) => setFieldValue("phone", value)}
+                    value={values.phone}
+                  />
+                </FormLayout>
+              </LegacyCard>
+            </Layout.AnnotatedSection>
+            <Layout.AnnotatedSection
+              id="studentAdditionalInfo"
+              title="Notas"
+              description="Agrega notas sobre tu alumno"
+            >
+              <LegacyCard sectioned>
+                <FormLayout>
+                  <TextField
+                    label="Nota"
+                    value={values.notes}
+                    onChange={(value) => setFieldValue("notes", value)}
+                  />
+                </FormLayout>
+              </LegacyCard>
+            </Layout.AnnotatedSection>
+          </Layout>
+        </div>
+      </Form>
+    </FormikProvider>
+  );
+}
+export default AddStudentForm;
