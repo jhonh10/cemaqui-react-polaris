@@ -1,28 +1,39 @@
 import { useFetchStudents } from "../hooks/useFetchStudents";
 import { AllStudents } from "./allStudents";
 
-export default function AllStudentsFlag() {
+const StudentsContainer = () => {
   const {
-    data,
+    students,
     isLoading,
     isError,
-    error,
-    isPreviousData,
     page,
     setPage,
+    hasMore,
+    isPreviousData,
     setPageAction,
+    firstVisible,
+    lastVisible,
+    setFirstVisible,
+    setLastVisible
   } = useFetchStudents();
+
   if (isLoading) return <div>Cargando...</div>;
-  if (isError) return <div>´se ha producido un error ${error}´</div>;
-  if (!data.studentList) return <div>No students</div>;
-  console.log(data.studentList);
+  if (isError) return <div>Error al cargar los estudiantes</div>;
+
   return (
     <AllStudents
-      students={data?.studentList}
+      students={students}
       setPage={setPage}
       page={page}
-      hasMore={data?.hasMore}
+      hasMore={hasMore}
+      isPreviousData={isPreviousData}
       setPageAction={setPageAction}
+      firstVisible={firstVisible}
+      lastVisible={lastVisible}
+      setFirstVisible={setFirstVisible}
+      setLastVisible={setLastVisible}
     />
   );
-}
+};
+
+export default StudentsContainer;
