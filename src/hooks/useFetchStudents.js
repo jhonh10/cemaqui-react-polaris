@@ -8,21 +8,38 @@ export const useFetchStudents = () => {
   const [firstVisible, setFirstVisible] = useState(null);
   const [lastVisible, setLastVisible] = useState(null);
 
-  console.log(pageAction, lastVisible, firstVisible);
   const { data, isLoading, isError, error, isPreviousData } = useQuery({
-    queryKey: ["students", page],
-    queryFn: () => getStudents(page, lastVisible, setLastVisible),
+    queryKey: ["students", page, pageAction],
+    queryFn: () =>
+      getStudents(
+        page,
+        pageAction,
+        firstVisible,
+        lastVisible,
+        setFirstVisible,
+        setLastVisible
+      ),
     refetchOnWindowFocus: false,
     keepPreviousData: true,
   });
+
+  // Determinar si hay más páginas
+  const hasMore = data?.hasMore || false;
+
   return {
-    data,
+    students: data?.studentList || [],
     isLoading,
     isError,
     error,
     isPreviousData,
     page,
     setPage,
+    hasMore,
     setPageAction,
+    // También necesitamos exportar estas propiedades
+    firstVisible,
+    lastVisible,
+    setFirstVisible,
+    setLastVisible
   };
 };
