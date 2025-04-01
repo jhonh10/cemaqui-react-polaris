@@ -16,11 +16,20 @@ export const ListTablePagination = ({
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   
-  // Actualizar la URL cuando cambia la página
+  // Modificar el useEffect que actualiza la URL
   useEffect(() => {
-    // Solo aplicar cuando no hay búsqueda activa
+    // Solo aplicar cuando no hay búsqueda activa y cuando la página cambia genuinamente (no al montar)
     if (!isSearchActive) {
       const params = new URLSearchParams(searchParams);
+      const currentPageParam = params.get("page");
+      const currentPageNumber = currentPageParam ? parseInt(currentPageParam, 10) : 1;
+      
+      // Evitar actualizaciones innecesarias al montar o si ya estamos en la página correcta
+      if (page === currentPageNumber) {
+        return;
+      }
+      
+      console.log(`📝 Actualizando URL: Cambiando página de ${currentPageNumber} a ${page}`);
       
       // Mantener query si existe
       const currentQuery = params.get("query") || "";
@@ -43,13 +52,7 @@ export const ListTablePagination = ({
         params.set("_prevPage", prevPage);
       }
       
-      // Evitar actualización cíclica comparando URLs
-      const newUrl = params.toString();
-      const currentUrl = searchParams.toString();
-      
-      if (newUrl !== currentUrl) {
-        setSearchParams(params);
-      }
+      setSearchParams(params);
     }
   }, [page, searchParams, setSearchParams, isSearchActive]);
 
