@@ -17,15 +17,21 @@ export const useFetchStudents = () => {
   // Añadir si es una carga inicial
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
+  // Añade un estado para controlar si es la carga inicial desde URL
+  const [initializedFromUrl, setInitializedFromUrl] = useState(false);
+
   // Modificar el efecto de establecer la página desde la URL:
 
   // Efecto para establecer la página desde la URL al cargar
   useEffect(() => {
-    if (!searchTerm) {
+    if (!searchTerm && !initializedFromUrl) {
       const pageParam = searchParams.get("page");
       if (pageParam && !Number.isNaN(parseInt(pageParam, 10))) {
         const pageNumber = parseInt(pageParam, 10);
         console.log(`📄 Configurando página inicial a ${pageNumber} desde URL`);
+        
+        // Marcar que ya inicializamos desde URL para evitar ciclos
+        setInitializedFromUrl(true);
         setPage(pageNumber);
         
         // Al restaurar la página desde la URL, necesitamos reiniciar los cursores
@@ -40,10 +46,11 @@ export const useFetchStudents = () => {
       } else {
         // Si no hay parámetro de página, asegurarnos de estar en página 1
         console.log("📄 No hay página en URL, estableciendo página 1");
+        setInitializedFromUrl(true);
         setPage(1);
       }
     }
-  }, [searchParams, searchTerm, setFirstVisible, setLastVisible, setPage, setPageAction]);
+  }, [searchParams, searchTerm, setFirstVisible, setLastVisible, setPage, setPageAction, initializedFromUrl]);
 
   // Efecto para resetear paginación cuando cambia el término de búsqueda
   useEffect(() => {
