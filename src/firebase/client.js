@@ -17,6 +17,8 @@ import {
   orderBy,
   limit,
   startAfter,
+  limitToLast,
+  endAt
 } from "firebase/firestore";
 
 const firebaseConfig = JSON.parse(process.env.REACT_APP_FIREBASE_CONFIG);
@@ -40,42 +42,77 @@ const mapStudentFromFirebase = (doc) => {
   };
 };
 
-export async function getStudents(page, lastVisible, setLastVisible) {
+export async function getStudents(
+  page,
+  pageAction,
+  firstVisible,
+  lastVisible,
+  setFirstVisible,
+  setLastVisible
+) {
   const PAGE_SIZE = 20;
-  if (page === 1) {
-    const studentsColl = query(
-      collection(db, "Alumnos"),
-      orderBy("expeditionDate", "desc"),
-      limit(PAGE_SIZE)
-    );
+  let studentsColl;
+  
+  try {
+    // Primera página
+    if (page === 1) {
+      studentsColl = query(
+        collection(db, "Alumnos"),
+        orderBy("expeditionDate", "desc"),
+        limit(PAGE_SIZE)
+      );
+    } 
+    // Página siguiente
+    else if (pageAction === "next" && lastVisible) {
+      studentsColl = query(
+        collection(db, "Alumnos"),
+        orderBy("expeditionDate", "desc"),
+        startAfter(lastVisible),
+        limit(PAGE_SIZE)
+      );
+    } 
+    // Página anterior
+    else if (pageAction === "previous" && firstVisible) {
+      const endAtFirst = query(
+        collection(db, "Alumnos"),
+        orderBy("expeditionDate", "desc"),
+        startAfter(firstVisible),
+        limit(PAGE_SIZE)
+      );
+      
+      studentsColl = query(
+        collection(db, "Alumnos"),
+        orderBy("expeditionDate", "desc"),
+        endAt(firstVisible),
+        limitToLast(PAGE_SIZE)
+      );
+    } else {
+      // Si no hay navegación válida, retornar null
+      return null;
+    }
+
     const studentSnapShot = await getDocs(studentsColl);
-    const lastVisible = studentSnapShot.docs[studentSnapShot.docs.length - 1];
+    
+    // Si no hay resultados
+    if (studentSnapShot.empty) {
+      return { studentList: [], hasMore: false };
+    }
+    
+    // Guardar referencias a documentos para paginación
+    const newFirstVisible = studentSnapShot.docs[0];
+    const newLastVisible = studentSnapShot.docs[studentSnapShot.docs.length - 1];
     const hasMore = studentSnapShot.docs.length === PAGE_SIZE;
-    setLastVisible(lastVisible);
-    if (studentSnapShot) {
-      const studentList = studentSnapShot.docs.map(mapStudentFromFirebase);
-      return { studentList, hasMore };
-    }
-    return null;
+    
+    setFirstVisible(newFirstVisible);
+    setLastVisible(newLastVisible);
+    
+    const studentList = studentSnapShot.docs.map(mapStudentFromFirebase);
+    return { studentList, hasMore };
+    
+  } catch (error) {
+    console.error("Error al obtener estudiantes:", error);
+    return { studentList: [], hasMore: false, error };
   }
-  if (page > 1) {
-    const nextData = query(
-      collection(db, "Alumnos"),
-      orderBy("expeditionDate", "desc"),
-      startAfter(lastVisible),
-      limit(20)
-    );
-    const data = await getDocs(nextData);
-    const lastVisibleNext = data.docs[data.docs.length - 1];
-    const hasMore = data.docs.length === PAGE_SIZE;
-    setLastVisible(lastVisibleNext);
-    if (data) {
-      const studentList = data.docs.map(mapStudentFromFirebase);
-      return { studentList, hasMore };
-    }
-    return null;
-  }
-  return null;
 }
 
 export async function getStudentById(studentId) {
