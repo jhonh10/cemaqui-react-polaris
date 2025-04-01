@@ -56,6 +56,7 @@ const ListTable = ({
   const handleRowClick = useCallback(
     (id) => {
       // Usar state para navegación para preservar el estado actual
+      console.log(`🔍 Navegando a detalles del alumno ${id} desde página ${page}`);
       navigate(id, {
         state: {
           fromList: true,
