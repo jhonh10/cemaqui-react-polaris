@@ -6,9 +6,10 @@ import {
   Select,
   useIndexResourceState,
   LegacyCard,
-  IndexFilters,
+  Spinner,
+  EmptySearchResult,
 } from "@shopify/polaris";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFilterStudents } from "../hooks/useFilterStudents";
 import { ListTablePagination } from "./ListTablePagination";
@@ -33,23 +34,44 @@ const ListTable = ({
   const { filteredStudents, isFiltering, queryValue, setQueryValue } =
     useFilterStudents({
       students,
+      setPage, // Pasar setPage para sincronizar estados
     });
+
+  // Estado de carga combinado
+  const isLoading = isFiltering || isPreviousData;
+
   const { selectedResources, allResourcesSelected, handleSelectionChange } =
     useIndexResourceState(filteredStudents);
   const navigate = useNavigate();
   const [taggedWith, setTaggedWith] = useState("");
   const [sortValue, setSortValue] = useState("today");
+
   const handleTaggedWithChange = useCallback(
     (value) => setTaggedWith(value),
     []
   );
   const handleTaggedWithRemove = useCallback(() => setTaggedWith(""), []);
   const handleSortChange = useCallback((value) => setSortValue(value), []);
-  const handleOnClick = useCallback((value) => navigate(value), [navigate]);
+
+  const handleRowClick = useCallback(
+    (id) => {
+      // Usar state para navegación para preservar el estado actual
+      navigate(id, {
+        state: {
+          fromList: true,
+          currentPage: page,
+          currentQuery: queryValue,
+        },
+      });
+    },
+    [navigate, page, queryValue]
+  );
+
   const handleQueryValueRemove = useCallback(
     () => setQueryValue(""),
     [setQueryValue]
   );
+
   const handleClearAll = useCallback(() => {
     handleTaggedWithRemove();
     handleQueryValueRemove();
@@ -72,7 +94,7 @@ const ListTable = ({
       label: "Tagged with",
       filter: (
         <TextField
-          label="Taaged with"
+          label="Tagged with"
           value={taggedWith}
           onChange={handleTaggedWithChange}
           autoComplete="off"
@@ -96,17 +118,21 @@ const ListTable = ({
   const sortOptions = [
     { label: "Hoy", value: "today" },
     { label: "Ayer", value: "yesterday" },
-    { label: "Ultimos 7 dias", value: "lastWeek" },
+    { label: "Últimos 7 días", value: "lastWeek" },
   ];
 
-  const rowMarkup = filteredStudents.map(
+  const sortedAndFilteredStudents = useMemo(() => {
+    return filteredStudents;
+  }, [filteredStudents, sortValue]);
+
+  const rowMarkup = sortedAndFilteredStudents.map(
     ({ id, firstname, lastname, documentId, resolution, createdAt }, index) => (
       <IndexTable.Row
         id={id}
         key={id}
         selected={selectedResources.includes(id)}
         position={index}
-        onClick={() => handleOnClick(id)}
+        onClick={() => handleRowClick(id)}
       >
         <IndexTable.Cell>
           <Text variant="headingSm" as="span">
@@ -119,6 +145,15 @@ const ListTable = ({
       </IndexTable.Row>
     )
   );
+
+  // Mensaje para cuando no hay resultados tras búsqueda
+  const emptyStateMarkup = queryValue && !isLoading ? (
+    <EmptySearchResult
+      title={`No se encontraron alumnos que coincidan con "${queryValue}"`}
+      description="Intenta cambiar los términos de búsqueda"
+      withIllustration
+    />
+  ) : null;
 
   const table = (
     <div style={{ margin: "var(--p-space-4) 0" }}>
@@ -146,26 +181,50 @@ const ListTable = ({
             />
           </div>
         </div>
-        <IndexTable
-          resourceName={resourceName}
-          itemCount={filteredStudents.length}
-          selectedItemsCount={
-            allResourcesSelected ? "All" : selectedResources.length
-          }
-          onSelectionChange={handleSelectionChange}
-          hasMoreItems
-          promotedBulkActions={promotedBulkActions}
-          lastColumnSticky
-          loading={isFiltering}
-          headings={[
-            { title: "Nombre" },
-            { title: "Numero de Cedula" },
-            { title: "Fecha" },
-            { title: "Resolucion", hidden: false },
-          ]}
-        >
-          {rowMarkup}
-        </IndexTable>
+
+        {isLoading && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              padding: "32px",
+            }}
+          >
+            <Spinner size="large" color="teal" />
+          </div>
+        )}
+
+        {!isLoading && sortedAndFilteredStudents.length === 0 ? (
+          <div style={{ padding: "24px" }}>
+            {emptyStateMarkup || (
+              <Text alignment="center" variant="bodyMd" color="subdued">
+                No hay alumnos disponibles
+              </Text>
+            )}
+          </div>
+        ) : (
+          <IndexTable
+            resourceName={resourceName}
+            itemCount={sortedAndFilteredStudents.length}
+            selectedItemsCount={
+              allResourcesSelected ? "All" : selectedResources.length
+            }
+            onSelectionChange={handleSelectionChange}
+            hasMoreItems
+            promotedBulkActions={promotedBulkActions}
+            lastColumnSticky
+            loading={isLoading}
+            headings={[
+              { title: "Nombre" },
+              { title: "Número de Cédula" },
+              { title: "Fecha" },
+              { title: "Resolución", hidden: false },
+            ]}
+          >
+            {rowMarkup}
+          </IndexTable>
+        )}
+
         <ListTablePagination
           page={page}
           setPage={setPage}
@@ -176,6 +235,7 @@ const ListTable = ({
           lastVisible={lastVisible}
           setFirstVisible={setFirstVisible}
           setLastVisible={setLastVisible}
+          isSearchActive={queryValue.length > 0}
         />
       </LegacyCard>
     </div>
@@ -199,4 +259,5 @@ const ListTable = ({
     return value === "" || value == null;
   }
 };
+
 export default ListTable;

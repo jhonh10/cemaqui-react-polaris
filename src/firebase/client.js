@@ -18,7 +18,7 @@ import {
   limit,
   startAfter,
   limitToLast,
-  endAt
+  endBefore
 } from "firebase/firestore";
 
 const firebaseConfig = JSON.parse(process.env.REACT_APP_FIREBASE_CONFIG);
@@ -51,62 +51,135 @@ export async function getStudents(
   setLastVisible
 ) {
   const PAGE_SIZE = 20;
-  let studentsColl;
   
   try {
-    // Primera página
-    if (page === 1) {
+    console.log(`Solicitud getStudents - Página: ${page}, Acción: ${pageAction}`);
+    
+    // Caso especial: Si estamos en una página >1 sin cursores (por ejemplo, al refrescar)
+    if (page > 1 && !firstVisible && !lastVisible) {
+      console.log(`⚠️ Reconstruyendo página ${page} después de refrescar...`);
+      
+      // Enfoque simplificado: Calcular offset y obtener todos los documentos de una vez
+      const totalDocsNeeded = page * PAGE_SIZE;
+      
+      console.log(`Recuperando ${totalDocsNeeded} documentos para reconstruir la página ${page}`);
+      
+      const largeQuery = query(
+        collection(db, "Alumnos"),
+        orderBy("expeditionDate", "desc"),
+        limit(totalDocsNeeded + 1) // +1 para verificar si hay más
+      );
+      
+      const largeSnapshot = await getDocs(largeQuery);
+      console.log(`Documentos recuperados: ${largeSnapshot.size} / ${totalDocsNeeded} necesarios`);
+      
+      if (largeSnapshot.empty) {
+        console.log("No se encontraron documentos");
+        return { studentList: [], hasMore: false };
+      }
+      
+      // Si no hay suficientes documentos para la página solicitada
+      if (largeSnapshot.size <= (page - 1) * PAGE_SIZE) {
+        console.log(`No hay suficientes documentos para la página ${page}`);
+        // Calcular la última página posible
+        const lastPossiblePage = Math.ceil(largeSnapshot.size / PAGE_SIZE);
+        console.log(`Redirigiendo a la última página disponible: ${lastPossiblePage}`);
+        return { studentList: [], hasMore: false, redirectToPage: lastPossiblePage };
+      }
+      
+      // Extraer solo los documentos para la página actual
+      const startIdx = (page - 1) * PAGE_SIZE;
+      const endIdx = Math.min(startIdx + PAGE_SIZE, largeSnapshot.size);
+      const docsForCurrentPage = largeSnapshot.docs.slice(startIdx, endIdx);
+      
+      console.log(`Mostrando documentos del ${startIdx+1} al ${endIdx} para página ${page}`);
+      
+      // Verificar si hay más páginas
+      const hasMore = largeSnapshot.size > page * PAGE_SIZE;
+      
+      // Establecer cursores para navegación futura
+      const newFirstVisible = docsForCurrentPage[0];
+      const newLastVisible = docsForCurrentPage[docsForCurrentPage.length - 1];
+      
+      console.log(`Primer documento: ${newFirstVisible.id}`);
+      console.log(`Último documento: ${newLastVisible.id}`);
+      console.log(`¿Hay más?: ${hasMore}`);
+      
+      setFirstVisible(newFirstVisible);
+      setLastVisible(newLastVisible);
+      
+      const studentList = docsForCurrentPage.map(mapStudentFromFirebase);
+      return { studentList, hasMore };
+    }
+    
+    // Caso normal: Navegación con cursores o primera página
+    let studentsColl;
+    
+    // Primera página o sin acción específica
+    if (page === 1 || !pageAction) {
+      console.log("Cargando primera página");
       studentsColl = query(
         collection(db, "Alumnos"),
         orderBy("expeditionDate", "desc"),
-        limit(PAGE_SIZE)
+        limit(PAGE_SIZE + 1) // +1 para verificar si hay más
       );
     } 
     // Página siguiente
     else if (pageAction === "next" && lastVisible) {
+      console.log("Cargando página siguiente");
       studentsColl = query(
         collection(db, "Alumnos"),
         orderBy("expeditionDate", "desc"),
         startAfter(lastVisible),
-        limit(PAGE_SIZE)
+        limit(PAGE_SIZE + 1) 
       );
     } 
     // Página anterior
     else if (pageAction === "previous" && firstVisible) {
-      const endAtFirst = query(
-        collection(db, "Alumnos"),
-        orderBy("expeditionDate", "desc"),
-        startAfter(firstVisible),
-        limit(PAGE_SIZE)
-      );
-      
+      console.log("Cargando página anterior");
       studentsColl = query(
         collection(db, "Alumnos"),
         orderBy("expeditionDate", "desc"),
-        endAt(firstVisible),
-        limitToLast(PAGE_SIZE)
+        endBefore(firstVisible),
+        limitToLast(PAGE_SIZE + 1)
       );
     } else {
-      // Si no hay navegación válida, retornar null
-      return null;
+      console.log("❌ No se pudo determinar qué página cargar. Cargando primera página.");
+      // Si hay algún problema con los parámetros, cargamos la primera página
+      studentsColl = query(
+        collection(db, "Alumnos"),
+        orderBy("expeditionDate", "desc"),
+        limit(PAGE_SIZE + 1)
+      );
     }
 
     const studentSnapShot = await getDocs(studentsColl);
     
-    // Si no hay resultados
+    console.log(`Documentos obtenidos: ${studentSnapShot.size}`);
+    
     if (studentSnapShot.empty) {
+      console.log("No se encontraron documentos");
       return { studentList: [], hasMore: false };
     }
     
+    // Verificar si hay más documentos
+    const hasMore = studentSnapShot.size > PAGE_SIZE;
+    
+    // Si pedimos uno extra para verificar hasMore, lo eliminamos 
+    const docs = hasMore ? studentSnapShot.docs.slice(0, PAGE_SIZE) : studentSnapShot.docs;
+    
     // Guardar referencias a documentos para paginación
-    const newFirstVisible = studentSnapShot.docs[0];
-    const newLastVisible = studentSnapShot.docs[studentSnapShot.docs.length - 1];
-    const hasMore = studentSnapShot.docs.length === PAGE_SIZE;
+    const newFirstVisible = docs[0];
+    const newLastVisible = docs[docs.length - 1];
+    
+    console.log(`Primer documento ID: ${newFirstVisible.id}`);
+    console.log(`Último documento ID: ${newLastVisible.id}`);
+    console.log(`¿Hay más?: ${hasMore}`);
     
     setFirstVisible(newFirstVisible);
     setLastVisible(newLastVisible);
     
-    const studentList = studentSnapShot.docs.map(mapStudentFromFirebase);
+    const studentList = docs.map(mapStudentFromFirebase);
     return { studentList, hasMore };
     
   } catch (error) {
@@ -174,4 +247,73 @@ export async function validateIfStudentExist({ id }) {
     return querySnapshot.docs.map((doc) => doc.id);
   }
   return false;
+}
+
+export async function searchStudents(searchTerm) {
+  try {
+    if (!searchTerm || searchTerm.trim() === "") {
+      return { studentList: [], hasMore: false };
+    }
+    
+    const searchTermLower = searchTerm.toLowerCase().trim();
+    // Dividir el término de búsqueda en palabras individuales
+    const searchTerms = searchTermLower.split(/\s+/).filter(term => term.length > 0);
+    
+    const q = query(
+      collection(db, "Alumnos"),
+      orderBy("expeditionDate", "desc"),
+      limit(100)
+    );
+    
+    const snapshot = await getDocs(q);
+    
+    console.log(`Consultando colección "Alumnos" - Documentos encontrados: ${snapshot.size}`);
+    
+    // Filtrar los resultados en el cliente
+    const studentList = [];
+    
+    snapshot.forEach((doc) => {
+      const student = mapStudentFromFirebase(doc);
+      
+      // Crear un string combinado para búsquedas de nombres completos
+      const fullName = `${student.firstname || ''} ${student.lastname || ''}`.toLowerCase();
+      const reversedFullName = `${student.lastname || ''} ${student.firstname || ''}`.toLowerCase();
+      const documentIdStr = (student.documentId || '').toString().toLowerCase();
+      
+      // Verificar coincidencias de términos completos
+      if (
+        fullName.includes(searchTermLower) || 
+        reversedFullName.includes(searchTermLower) ||
+        documentIdStr.includes(searchTermLower)
+      ) {
+        studentList.push(student);
+        return; // Salir temprano para evitar duplicados
+      }
+      
+      // Si no hay coincidencia con el término completo, verificar coincidencias parciales
+      // para cada palabra individual del término de búsqueda
+      const allTermsMatch = searchTerms.every(term => {
+        return (
+          (student.firstname?.toLowerCase() || '').includes(term) ||
+          (student.lastname?.toLowerCase() || '').includes(term) ||
+          documentIdStr.includes(term) ||
+          fullName.includes(term)
+        );
+      });
+      
+      if (allTermsMatch) {
+        studentList.push(student);
+      }
+    });
+    
+    console.log(`Búsqueda: "${searchTerm}" - Resultados filtrados: ${studentList.length}`);
+    
+    return {
+      studentList,
+      hasMore: false
+    };
+  } catch (error) {
+    console.error("Error searching students:", error);
+    throw error;
+  }
 }
