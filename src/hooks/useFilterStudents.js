@@ -1,61 +1,50 @@
-import { useState, useEffect, useCallback } from "react";
-import { filter } from "lodash";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 
 export const useFilterStudents = ({ students }) => {
-  const [filteredStudents, setFilteredStudents] = useState(students);
-  const [isFiltering, setIsFiltering] = useState(false);
+  // Obtener query de la URL al iniciar
   const [searchParams, setSearchParams] = useSearchParams();
-  const query = searchParams.get("query");
-  const [queryValue, setQueryValue] = useState(query || "");
+  const initialQuery = searchParams.get("query") || "";
+  
+  // Estados
+  const [queryValue, setQueryValue] = useState(initialQuery);
+  const [isFiltering, setIsFiltering] = useState(false);
 
-  const applySortFilter = (array, query) => {
-    const stabilizedThis = array.map((el, index) => [el, index]);
-    if (query) {
-      return filter(
-        array,
-        (_user) =>
-          _user.firstname.toLowerCase().includes(query.toLowerCase()) ||
-          _user.lastname.toLowerCase().includes(query.toLowerCase()) ||
-          _user.documentId
-            .toString()
-            .toLowerCase()
-            .includes(query.toLowerCase())
-      );
-    }
-    return stabilizedThis.map((el) => el[0]);
-  };
-
-  const addQueryParams = useCallback(() => {
-    setSearchParams({ query: queryValue });
-  }, [queryValue, setSearchParams]);
-
-  const removeQueryParams = useCallback(() => {
-    searchParams.delete("query");
-    setSearchParams(searchParams);
-  }, [searchParams, setSearchParams]);
-
+  // Actualizar URL cuando cambia la consulta (con debounce)
   useEffect(() => {
-    const timeOutId = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       if (queryValue) {
-        addQueryParams();
-        setFilteredStudents(applySortFilter(students, queryValue));
-      }
-      if (!queryValue) {
-        removeQueryParams();
-        setFilteredStudents(students);
+        setSearchParams({ query: queryValue });
+      } else {
+        searchParams.delete("query");
+        setSearchParams(searchParams);
       }
     }, 500);
-    return () => clearTimeout(timeOutId);
-  }, [queryValue, students, addQueryParams, removeQueryParams]);
+    
+    return () => clearTimeout(timeoutId);
+  }, [queryValue, searchParams, setSearchParams]);
 
-  useEffect(() => {
+  // Filtrar estudiantes basado en la consulta (memoizado)
+  const filteredStudents = useMemo(() => {
     setIsFiltering(true);
-    const timeOutId = setTimeout(() => {
-      setIsFiltering(false);
-    }, 1000);
-    return () => clearTimeout(timeOutId);
-  }, [filteredStudents]);
+    
+    if (!queryValue.trim()) {
+      // Si no hay consulta, devolver todos los estudiantes
+      setTimeout(() => setIsFiltering(false), 300);
+      return students;
+    }
+    
+    const normalizedQuery = queryValue.toLowerCase().trim();
+    
+    const result = students.filter(student => 
+      student.firstname?.toLowerCase().includes(normalizedQuery) ||
+      student.lastname?.toLowerCase().includes(normalizedQuery) ||
+      student.documentId?.toString().toLowerCase().includes(normalizedQuery)
+    );
+    
+    setTimeout(() => setIsFiltering(false), 300);
+    return result;
+  }, [queryValue, students]);
 
   return {
     filteredStudents,
