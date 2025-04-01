@@ -40,7 +40,9 @@ export const StudentDetails = ({ studentData }) => {
 
     const params = new URLSearchParams();
 
-    if (currentPage > 1) {
+    // Asegurarnos de que currentPage sea un número positivo
+    if (currentPage && currentPage > 1) {
+      console.log(`🔙 Regresando a la página ${currentPage}`);
       params.set("page", currentPage.toString());
     }
 
