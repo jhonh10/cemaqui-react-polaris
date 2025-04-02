@@ -39,11 +39,9 @@ const StudentsContainer = () => {
     }
   }, [location.state]);
 
-  // Solo mostrar indicador de carga global si:
-  // 1. Estamos cargando
-  // 2. No tenemos datos
-  // 3. No estamos volviendo de la página de detalles
-  if (isLoading && students.length === 0 && !isReturningFromDetails) {
+  // Modificar la condición de renderizado del spinner de carga
+  // Si se está cargando (incluyendo el primer renderizado), mostrar spinner
+  if (isLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
         <Spinner size="large" color="teal" />

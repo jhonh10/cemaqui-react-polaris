@@ -180,6 +180,18 @@ export async function getStudents(
     setLastVisible(newLastVisible);
     
     const studentList = docs.map(mapStudentFromFirebase);
+
+    if (studentList.length === 0 && page > 1) {
+      console.log(`⚠️ No se encontraron documentos para la página ${page}`);
+      console.log(`🔄 Redirigiendo a la última página válida`);
+      return { studentList: [], hasMore: false, redirectToPage: page - 1 };
+    }
+
+    if (studentSnapShot.size < PAGE_SIZE && !studentSnapShot.empty) {
+      console.log(`🏁 Detectada última página (${page}) - ${studentSnapShot.size} documentos`);
+      return { studentList, hasMore: false };
+    }
+
     return { studentList, hasMore };
     
   } catch (error) {
