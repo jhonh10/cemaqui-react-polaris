@@ -9,7 +9,7 @@ import {
   Spinner,
   EmptySearchResult,
 } from "@shopify/polaris";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFilterStudents } from "../hooks/useFilterStudents";
 import { ListTablePagination } from "./ListTablePagination";
@@ -149,6 +149,26 @@ const ListTable = ({
     )
   );
 
+  // Mostrar un mensaje cuando detectamos paginación inválida
+  const [paginationError, setPaginationError] = useState(false);
+
+  useEffect(() => {
+    // Verificar si estamos retornando de detalles
+    const isReturningFromDetails = window.history.state?.usr?.fromList;
+
+    // Resetear error de paginación cuando cambia la página
+    setPaginationError(false);
+
+    // No mostrar error si:
+    // 1. Estamos retornando de la página de detalles (es un caso especial)
+    // 2. Estamos en la primera página (siempre debería ser válida)
+    // 3. Estamos cargando datos (esperar a que termine la carga)
+    if (!isReturningFromDetails && !isLoading && students.length === 0 && page > 1) {
+      console.log("⚠️ Posible error de paginación: página sin datos");
+      setPaginationError(true);
+    }
+  }, [page, isLoading, students.length]);
+
   // Mensaje para cuando no hay resultados tras búsqueda
   const emptyStateMarkup = queryValue && !isLoading ? (
     <EmptySearchResult
@@ -161,6 +181,27 @@ const ListTable = ({
   const table = (
     <div style={{ margin: "var(--p-space-4) 0" }}>
       <LegacyCard>
+        {paginationError && (
+          <div
+            style={{
+              padding: "16px",
+              backgroundColor: "rgba(253, 201, 73, 0.1)",
+              borderRadius: "4px",
+              margin: "0 16px 16px 16px",
+              border: "1px solid #FDC949",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <Text variant="bodyMd">
+              Ha ocurrido un problema al cargar esta página. Volviendo a la última página válida...
+            </Text>
+            <div>
+              <Spinner size="small" />
+            </div>
+          </div>
+        )}
         <div style={{ padding: "16px", display: "flex" }}>
           <div style={{ flex: 1 }}>
             <Filters

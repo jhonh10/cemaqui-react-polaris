@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { Page, Layout, PageActions, LegacyCard } from "@shopify/polaris";
@@ -33,6 +33,20 @@ export const StudentDetails = ({ studentData }) => {
   const currentPage = state?.currentPage;
   const currentQuery = state?.currentQuery;
 
+  // Verificar si la página actual es la última conocida
+  const isLastPage = useMemo(() => {
+    try {
+      const pagesInfo = JSON.parse(sessionStorage.getItem('pagesInfo') || '{}');
+      const pageData = pagesInfo[currentPage];
+      
+      // Si esta página no tiene más páginas, es la última
+      return pageData && pageData.hasMore === false;
+    } catch (e) {
+      console.error("Error al verificar si es la última página:", e);
+      return false;
+    }
+  }, [currentPage]);
+
   const getBackUrl = () => {
     let backUrl = "/admin/students";
 
@@ -59,11 +73,21 @@ export const StudentDetails = ({ studentData }) => {
   };
 
   const handleBack = () => {
-    navigate(getBackUrl(), {
+    const backUrl = getBackUrl();
+    console.log(`🔙 Volviendo a: ${backUrl}, página: ${currentPage || 1}`);
+    
+    // Determinar la acción de paginación correcta para cuando volvamos
+    // Si estamos en la última página y volvemos a una página anterior,
+    // debemos usar pageAction="previous" en lugar de null
+    const pageAction = isLastPage && currentPage > 1 ? "previous" : null;
+    
+    navigate(backUrl, {
       state: {
-        fromList: true, // Mantenemos esto para detectar que venimos de la lista
-        returnToPage: currentPage, // Añadimos esto como referencia adicional
-      },
+        fromList: true,
+        currentPage: currentPage || 1,
+        pageAction,
+        timestamp: Date.now()
+      }
     });
   };
 

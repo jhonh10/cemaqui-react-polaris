@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Button, HorizontalStack, Text } from "@shopify/polaris";
 import { useSearchParams } from "react-router-dom";
 
@@ -15,6 +15,7 @@ export const ListTablePagination = ({
   isSearchActive
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isNavigating, setIsNavigating] = useState(false);
   
   // Modificar el useEffect que actualiza la URL
   useEffect(() => {
@@ -57,18 +58,36 @@ export const ListTablePagination = ({
   }, [page, searchParams, setSearchParams, isSearchActive]);
 
   const handleNextPage = useCallback(() => {
-    if (!isPreviousData && hasMore) {
+    if (!isPreviousData && hasMore && !isNavigating) {
+      // Bloquear navegación
+      setIsNavigating(true);
+      
+      // Configurar la acción y página
       setPageAction("next");
       setPage(prevPage => prevPage + 1);
+      
+      // Desbloquear después de un tiempo suficiente
+      setTimeout(() => {
+        setIsNavigating(false);
+      }, 500); // 500ms debería ser suficiente para evitar doble click
     }
-  }, [hasMore, isPreviousData, setPage, setPageAction]);
+  }, [hasMore, isPreviousData, setPage, setPageAction, isNavigating]);
 
   const handlePreviousPage = useCallback(() => {
-    if (page > 1) {
+    if (page > 1 && !isNavigating) {
+      // Bloquear navegación
+      setIsNavigating(true);
+      
+      // Configurar la acción y página
       setPageAction("previous");
       setPage(prevPage => prevPage - 1);
+      
+      // Desbloquear después de un tiempo
+      setTimeout(() => {
+        setIsNavigating(false);
+      }, 500);
     }
-  }, [page, setPage, setPageAction]);
+  }, [page, setPage, setPageAction, isNavigating]);
 
   // Si hay búsqueda activa, mostrar un mensaje diferente
   if (isSearchActive) {
@@ -89,13 +108,13 @@ export const ListTablePagination = ({
       <HorizontalStack gap="3">
         <Button 
           onClick={handlePreviousPage} 
-          disabled={page <= 1 || isPreviousData}
+          disabled={page <= 1 || isPreviousData || isNavigating}
         >
           Anterior
         </Button>
         <Button 
           onClick={handleNextPage} 
-          disabled={isPreviousData || !hasMore}
+          disabled={isPreviousData || !hasMore || isNavigating}
         >
           Siguiente
         </Button>
