@@ -48,63 +48,52 @@ export async function getStudents(
   firstVisible,
   lastVisible,
   setFirstVisible,
-  setLastVisible
+  setLastVisible,
+  forceRebuild = false
 ) {
   const PAGE_SIZE = 20;
   
   try {
-    console.log(`Solicitud getStudents - Página: ${page}, Acción: ${pageAction}`);
-    
-    // Caso especial: Si estamos en una página >1 sin cursores (por ejemplo, al refrescar)
-    if (page > 1 && !firstVisible && !lastVisible) {
-      console.log(`⚠️ Reconstruyendo página ${page} después de refrescar...`);
+    // Si estamos forzando una reconstrucción o estamos en una página > 1 sin cursores
+    if (forceRebuild || (page > 1 && !firstVisible && !lastVisible)) {
+      console.log(`⚠️ ${forceRebuild ? 'Forzando reconstrucción' : 'Reconstruyendo'} página ${page}`);
       
-      // Enfoque simplificado: Calcular offset y obtener todos los documentos de una vez
+      // Obtener todos los documentos necesarios hasta esta página
       const totalDocsNeeded = page * PAGE_SIZE;
-      
-      console.log(`Recuperando ${totalDocsNeeded} documentos para reconstruir la página ${page}`);
       
       const largeQuery = query(
         collection(db, "Alumnos"),
         orderBy("expeditionDate", "desc"),
-        limit(totalDocsNeeded + 1) // +1 para verificar si hay más
+        limit(totalDocsNeeded + 1)
       );
       
       const largeSnapshot = await getDocs(largeQuery);
-      console.log(`Documentos recuperados: ${largeSnapshot.size} / ${totalDocsNeeded} necesarios`);
       
       if (largeSnapshot.empty) {
         console.log("No se encontraron documentos");
         return { studentList: [], hasMore: false };
       }
       
-      // Si no hay suficientes documentos para la página solicitada
+      // Verificar si hay suficientes documentos
       if (largeSnapshot.size <= (page - 1) * PAGE_SIZE) {
-        console.log(`No hay suficientes documentos para la página ${page}`);
-        // Calcular la última página posible
         const lastPossiblePage = Math.ceil(largeSnapshot.size / PAGE_SIZE);
-        console.log(`Redirigiendo a la última página disponible: ${lastPossiblePage}`);
+        console.log(`Redirigiendo a última página: ${lastPossiblePage}`);
         return { studentList: [], hasMore: false, redirectToPage: lastPossiblePage };
       }
       
-      // Extraer solo los documentos para la página actual
+      // Extraer solo los documentos para esta página
       const startIdx = (page - 1) * PAGE_SIZE;
       const endIdx = Math.min(startIdx + PAGE_SIZE, largeSnapshot.size);
       const docsForCurrentPage = largeSnapshot.docs.slice(startIdx, endIdx);
       
-      console.log(`Mostrando documentos del ${startIdx+1} al ${endIdx} para página ${page}`);
-      
       // Verificar si hay más páginas
       const hasMore = largeSnapshot.size > page * PAGE_SIZE;
       
-      // Establecer cursores para navegación futura
+      // Establecer nuevos cursores
       const newFirstVisible = docsForCurrentPage[0];
       const newLastVisible = docsForCurrentPage[docsForCurrentPage.length - 1];
       
-      console.log(`Primer documento: ${newFirstVisible.id}`);
-      console.log(`Último documento: ${newLastVisible.id}`);
-      console.log(`¿Hay más?: ${hasMore}`);
-      
+      console.log(`Nuevos cursores: ${newFirstVisible.id} - ${newLastVisible.id}`);
       setFirstVisible(newFirstVisible);
       setLastVisible(newLastVisible);
       
