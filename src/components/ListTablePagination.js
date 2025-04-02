@@ -59,14 +59,23 @@ export const ListTablePagination = ({
 
   const handleNextPage = useCallback(() => {
     if (!isPreviousData && hasMore && !isNavigating) {
-      // Bloquear navegación
-      setIsNavigating(true);
+      // Guardar tiempo de última navegación
+      sessionStorage.setItem('lastNavigationTime', Date.now().toString());
       
-      // Configurar la acción y página
+      // Verificar tiempo desde última navegación
+      const lastNavTime = parseInt(sessionStorage.getItem('lastNavigationTime') || '0', 10);
+      const inactiveTime = Date.now() - lastNavTime;
+      const STALE_THRESHOLD = 5 * 60 * 1000; // 5 minutos
+      
+      // Si ha pasado mucho tiempo, alertar en consola
+      if (inactiveTime > STALE_THRESHOLD) {
+        console.log(`⚠️ Primera navegación después de ${Math.round(inactiveTime/60000)} minutos de inactividad`);
+      }
+      
+      setIsNavigating(true);
       setPageAction("next");
       setPage(prevPage => prevPage + 1);
       
-      // Desbloquear después de un tiempo suficiente
       setTimeout(() => {
         setIsNavigating(false);
       }, 500); // 500ms debería ser suficiente para evitar doble click
@@ -75,14 +84,22 @@ export const ListTablePagination = ({
 
   const handlePreviousPage = useCallback(() => {
     if (page > 1 && !isNavigating) {
-      // Bloquear navegación
-      setIsNavigating(true);
+      // Actualizar tiempo de navegación
+      sessionStorage.setItem('lastNavigationTime', Date.now().toString());
       
-      // Configurar la acción y página
+      // Verificar tiempo desde última navegación
+      const lastNavTime = parseInt(sessionStorage.getItem('lastNavigationTime') || '0', 10);
+      const inactiveTime = Date.now() - lastNavTime;
+      const STALE_THRESHOLD = 5 * 60 * 1000;
+      
+      if (inactiveTime > STALE_THRESHOLD) {
+        console.log(`⚠️ Primera navegación después de ${Math.round(inactiveTime/60000)} minutos de inactividad`);
+      }
+      
+      setIsNavigating(true);
       setPageAction("previous");
       setPage(prevPage => prevPage - 1);
       
-      // Desbloquear después de un tiempo
       setTimeout(() => {
         setIsNavigating(false);
       }, 500);
