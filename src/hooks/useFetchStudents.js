@@ -23,6 +23,16 @@ export const useFetchStudents = () => {
   const [isFirstRender, setIsFirstRender] = useState(true);
   const [initializedFromUrl, setInitializedFromUrl] = useState(false);
 
+  // Estado para rastrear la última actividad
+  const [lastActivityTimestamp, setLastActivityTimestamp] = useState(Date.now());
+
+  // Función para determinar si los cursores son probablemente obsoletos
+  const areCursorsProbablyStale = useCallback(() => {
+    const inactiveTime = Date.now() - lastActivityTimestamp;
+    const MAX_CURSOR_VALIDITY = 5 * 60 * 1000; // 5 minutos
+    return inactiveTime > MAX_CURSOR_VALIDITY;
+  }, [lastActivityTimestamp]);
+
   // SOLUCIÓN: Al montar el componente, marcar como primer render
   useEffect(() => {
     // Este efecto se ejecuta solo una vez al montar
@@ -36,6 +46,11 @@ export const useFetchStudents = () => {
     
     return () => clearTimeout(timer);
   }, []);
+
+  // Actualizar lastActivityTimestamp cuando hay interacción
+  useEffect(() => {
+    setLastActivityTimestamp(Date.now());
+  }, [page, searchTerm, pageAction]);
 
   // Función para actualizar la URL con el número de página
   const updatePageInUrl = useCallback((pageNumber) => {
@@ -119,11 +134,29 @@ export const useFetchStudents = () => {
     queryFn: () => {
       console.log(`🔍 Ejecutando consulta para página ${page}, acción: ${pageAction || 'normal'}`);
       
-      // Verificar si estamos retornando de detalles
       const isReturningFromDetails = window.history.state?.usr?.fromList;
+      const cursorsAreStale = areCursorsProbablyStale();
       
-      // Solo aplicar la verificación de página inexistente si no estamos retornando de detalles
-      // y estamos intentando ir a una página que excede el máximo conocido con acción "next"
+      if (cursorsAreStale) {
+        console.log(`⚠️ Cursores posiblemente obsoletos después de ${Math.round((Date.now() - lastActivityTimestamp) / 60000)} minutos de inactividad`);
+        
+        // Forzar reseteo de cursores si están probablemente obsoletos
+        if (pageAction) {
+          console.log(`🔄 Forzando reconstrucción completa de la página debido a inactividad`);
+          // Pasamos cursores nulos para forzar reconstrucción
+          return getStudents(
+            page,
+            null, // Anular pageAction
+            null, // Anular firstVisible
+            null, // Anular lastVisible
+            setFirstVisible,
+            setLastVisible,
+            true // Indicador de reconstrucción forzada
+          );
+        }
+      }
+      
+      // Verificar si estamos retornando de detalles
       if (maxKnownPage > 1 && page > maxKnownPage && pageAction === "next" && !isReturningFromDetails) {
         console.log(`⚠️ Evitando consulta a página inexistente: ${page} > ${maxKnownPage}`);
         return { studentList: [], hasMore: false, redirectToPage: maxKnownPage };
@@ -167,12 +200,6 @@ export const useFetchStudents = () => {
 
   // 5. Efecto para corregir navegación a páginas inexistentes
   useEffect(() => {
-    // Solo aplicar la corrección automática cuando:
-    // 1. Conocemos el máximo de páginas
-    // 2. La página actual excede ese máximo
-    // 3. No estamos cargando datos
-    // 4. No estamos retornando de una página de detalles
-    
     const isReturningFromDetails = window.history.state?.usr?.fromList;
     
     if (maxKnownPage > 1 && page > maxKnownPage && !isLoading && !isReturningFromDetails) {
@@ -222,6 +249,18 @@ export const useFetchStudents = () => {
       resultados: data?.studentList?.length || 0
     });
   }, [searchTerm, page, pageAction, hasMore, isLoading, data, firstVisible, lastVisible, isFirstRender]);
+
+  // Efecto para detectar inactividad al cambiar de página
+  useEffect(() => {
+    if (areCursorsProbablyStale()) {
+      console.log(`🔄 Detectada inactividad prolongada al cambiar a página ${page}`);
+      console.log(`🧹 Limpiando caché y cursores para forzar recarga`);
+      
+      setFirstVisible(null);
+      setLastVisible(null);
+      queryClient.invalidateQueries(["students", page]);
+    }
+  }, [page, areCursorsProbablyStale, queryClient]);
 
   // SOLUCIÓN: Crear un estado combinado para isLoading que considere el primer render
   const isLoadingWithMask = isLoading || isFirstRender;
