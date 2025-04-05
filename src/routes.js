@@ -14,30 +14,10 @@ import NewStudent from "./pages/newStudent";
 import AllStudentsFlag from "./pages/allStudentsFlag";
 import LayoutPage from "./layout/layoutPage";
 
-export default function App() {
-  const router = createBrowserRouter(
-    createRoutesFromElements(
-      <Route path="/admin" element={<LayoutPage />}>
-        <Route index element={<Home />} />
-        <Route path="students" element={<AllStudentsFlag />} />
-        <Route path="students/:studentId" element={<StudentFlag />} />
-        <Route path="students/new" element={<NewStudent />} />
-      </Route>
-    )
-  );
-  return (
-    <AppProvider linkComponent={Link} i18n={translations}>
-      <RouterProvider router={router} />
-    </AppProvider>
-  );
-}
-
+// Componente Link personalizado
 const IS_EXTERNAL_LINK_REGEX = /^(?:[a-z][a-z\d+.-]*:|\/\/)/;
 
 function Link({ children, url = "", external, ref, ...rest }) {
-  // react-router only supports links to pages it can handle itself. It does not
-  // support arbirary links, so anything that is not a path-based link should
-  // use a reglar old `a` tag
   if (external || IS_EXTERNAL_LINK_REGEX.test(url)) {
     rest.target = "_blank";
     rest.rel = "noopener noreferrer";
@@ -53,4 +33,21 @@ function Link({ children, url = "", external, ref, ...rest }) {
       {children}
     </ReactRouterLink>
   );
+}
+
+export default function Router() {
+  const router = createBrowserRouter(
+    createRoutesFromElements(
+      <Route path="/admin" element={<LayoutPage />}>
+        <Route index element={<Home />} />
+        <Route path="students" element={<AllStudentsFlag />} />
+        <Route path="students/:studentId" element={<StudentFlag />} />
+        <Route path="students/new" element={<NewStudent />} />
+      </Route>
+    )
+  );
+  
+  // Ya no es necesario envolver el RouterProvider con AppProvider
+  // porque ahora lo hacemos en App.js
+  return <RouterProvider router={router} />;
 }

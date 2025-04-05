@@ -33,6 +33,27 @@ export const useFetchStudents = () => {
     return inactiveTime > MAX_CURSOR_VALIDITY;
   }, [lastActivityTimestamp]);
 
+  // Efectos - agregar este al inicio
+  useEffect(() => {
+    // Solo en desarrollo
+    if (process.env.NODE_ENV === 'development') {
+      // Crear objeto global si no existe
+      window._debugHooks = window._debugHooks || {};
+      // Exponer estados y funciones del hook
+      window._debugHooks.useFetchStudents = {
+        setLastActivityTimestamp,
+        lastActivityTimestamp
+      };
+      
+      // Cleanup
+      return () => {
+        if (window._debugHooks?.useFetchStudents) {
+          window._debugHooks.useFetchStudents = null;
+        }
+      };
+    }
+  }, [lastActivityTimestamp]);
+
   // SOLUCIÓN: Al montar el componente, marcar como primer render
   useEffect(() => {
     // Este efecto se ejecuta solo una vez al montar
@@ -119,6 +140,48 @@ export const useFetchStudents = () => {
       queryClient.cancelQueries(["students", page]);
     }
   }, [queryClient, page]);
+
+  // Añadir un nuevo efecto para escuchar el evento appStateRestored
+
+  // Añadir este efecto después de los efectos existentes
+  useEffect(() => {
+    const handleAppStateRestored = (event) => {
+      const { currentPage, source, timestamp } = event.detail;
+      console.log(`🔄 Hook recibió evento de restauración para página ${currentPage} desde ${source}`);
+      
+      // Evitar procesamiento duplicado si ya se ha manejado este evento
+      if (window._lastRestorationTimestamp && 
+          timestamp - window._lastRestorationTimestamp < 1000) {
+        console.log("⚠️ Ignorando evento de restauración duplicado");
+        return;
+      }
+      
+      // Marcar como procesado
+      window._lastRestorationTimestamp = timestamp;
+      
+      // Restauración completa del estado
+      console.log("🧹 Limpiando estado y cursores completamente");
+      
+      // 1. Reiniciar cursores y estados
+      resetCursors();
+      
+      // 2. Esperar un ciclo para que se actualice el estado
+      setTimeout(() => {
+        // 3. Forzar la carga de la página correcta
+        if (page !== currentPage) {
+          console.log(`📄 Restableciendo a página ${currentPage}`);
+          setPage(currentPage);
+        } else {
+          // 4. Si ya estamos en la página correcta, forzar recarga
+          console.log(`🔄 Recargando página ${currentPage}`);
+          queryClient.invalidateQueries(["students", currentPage]);
+        }
+      }, 200);
+    };
+    
+    window.addEventListener('appStateRestored', handleAppStateRestored);
+    return () => window.removeEventListener('appStateRestored', handleAppStateRestored);
+  }, [queryClient, page, setPage, resetCursors]);
 
   // Configuración de queries
   const searchQueryConfig = {

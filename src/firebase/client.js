@@ -42,6 +42,31 @@ const mapStudentFromFirebase = (doc) => {
   };
 };
 
+// Añadir estos manejadores de errores para consultas de Firestore
+
+// Manejador de errores global para Firebase
+export const handleFirebaseErrors = (error, operation = "operación") => {
+  console.error(`Error en ${operation}:`, error);
+  
+  if (error.code === 'unavailable' || 
+      error.code === 'cancelled' ||
+      error.message.includes('network') ||
+      error.name === 'AbortError') {
+    
+    console.log("🔥 Error de Firebase relacionado con la conexión");
+    
+    // Disparar evento offline si no está ya offline
+    if (navigator.onLine) {
+      console.log("🔌 Simulando offline debido a error de Firebase");
+      window.dispatchEvent(new Event('offline'));
+    }
+    
+    return null;
+  }
+  
+  return [];
+};
+
 export async function getStudents(
   page,
   pageAction,
@@ -184,8 +209,7 @@ export async function getStudents(
     return { studentList, hasMore };
     
   } catch (error) {
-    console.error("Error al obtener estudiantes:", error);
-    return { studentList: [], hasMore: false, error };
+    return handleFirebaseErrors(error, "getStudents");
   }
 }
 
