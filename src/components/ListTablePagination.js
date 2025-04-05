@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Button, HorizontalStack, Text } from "@shopify/polaris";
 import { useSearchParams } from "react-router-dom";
+import InactivitySimulator from './InactivitySimulator';
 
 export const ListTablePagination = ({
   page,
@@ -106,13 +107,14 @@ export const ListTablePagination = ({
     }
   }, [page, setPage, setPageAction, isNavigating]);
 
-  // Si hay búsqueda activa, mostrar un mensaje diferente
+  // Renderizar componente según modo
   if (isSearchActive) {
     return (
       <div style={{ padding: "16px", display: "flex", justifyContent: "center" }}>
         <Text variant="bodyMd">
           Mostrando resultados de búsqueda
         </Text>
+        {process.env.NODE_ENV === 'development' && <InactivitySimulator />}
       </div>
     );
   }
@@ -136,6 +138,7 @@ export const ListTablePagination = ({
           Siguiente
         </Button>
       </HorizontalStack>
+      {process.env.NODE_ENV === 'development' && <InactivitySimulator />}
     </div>
   );
 };

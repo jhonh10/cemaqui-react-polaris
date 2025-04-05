@@ -163,11 +163,31 @@ const ListTable = ({
     // 1. Estamos retornando de la página de detalles (es un caso especial)
     // 2. Estamos en la primera página (siempre debería ser válida)
     // 3. Estamos cargando datos (esperar a que termine la carga)
-    if (!isReturningFromDetails && !isLoading && students.length === 0 && page > 1) {
+    // 4. Se está realizando una búsqueda (no aplicamos paginación en ese caso)
+    const isSearchActive = queryValue && queryValue.length > 0;
+    
+    if (!isReturningFromDetails && !isLoading && students.length === 0 && page > 1 && !isSearchActive) {
       console.log("⚠️ Posible error de paginación: página sin datos");
       setPaginationError(true);
+      
+      // Intentar recuperación automática si es un error de paginación
+      const attemptRecovery = () => {
+        console.log("🔄 Intentando recuperación automática...");
+        
+        // Forzar recarga desde página 1
+        setPage(1);
+        setFirstVisible(null);
+        setLastVisible(null);
+        setPageAction(null);
+      };
+      
+      // Dar tiempo para que otros efectos puedan resolver la situación
+      // antes de intentar la recuperación
+      const recoveryTimer = setTimeout(attemptRecovery, 2000);
+      
+      return () => clearTimeout(recoveryTimer);
     }
-  }, [page, isLoading, students.length]);
+  }, [page, isLoading, students.length, queryValue, setPage, setFirstVisible, setLastVisible, setPageAction]);
 
   // Mensaje para cuando no hay resultados tras búsqueda
   const emptyStateMarkup = queryValue && !isLoading ? (
