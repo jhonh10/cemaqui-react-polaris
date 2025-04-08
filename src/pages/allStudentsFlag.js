@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Spinner } from "@shopify/polaris";
 import { useFetchStudents } from "../hooks/useFetchStudents";
+import { useReturningNavigation } from "../hooks/useReturningNavigation";
 import { AllStudents } from "./allStudents";
 
 const StudentsContainer = () => {
@@ -17,38 +18,29 @@ const StudentsContainer = () => {
     firstVisible,
     lastVisible,
     setFirstVisible,
-    setLastVisible
+    setLastVisible,
   } = useFetchStudents();
-  
-  // Estado para detectar si venimos de la página de detalles
-  const location = useLocation();
-  const [isReturningFromDetails, setIsReturningFromDetails] = useState(false);
-  
-  // Detectar si estamos volviendo de la página de detalles
-  useEffect(() => {
-    if (location.state?.fromList) {
-      console.log("🔙 Volviendo de la página de detalles");
-      setIsReturningFromDetails(true);
-      
-      // Limpiar el estado después de un tiempo corto
-      const timer = setTimeout(() => {
-        setIsReturningFromDetails(false);
-      }, 1000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [location.state]);
+
+  // Usar el hook unificado
+  const { isReturningFromDetails } = useReturningNavigation();
 
   // Modificar la condición de renderizado del spinner de carga
   // Si se está cargando (incluyendo el primer renderizado), mostrar spinner
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "200px",
+        }}
+      >
         <Spinner size="large" color="teal" />
       </div>
     );
   }
-  
+
   if (isError) return <div>Error al cargar los estudiantes</div>;
 
   return (
