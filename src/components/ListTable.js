@@ -12,9 +12,25 @@ import {
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFilterStudents } from "../hooks/useFilterStudents";
-import { ListTablePagination } from "./ListTablePagination";
+import ListTablePagination from "./ListTablePagination";
+import { ensurePageCursors } from "../firebase/client";
 
-const ListTable = ({
+// Componente principal que recibe todos los props
+const ListTable = (props) => {
+  // Extraer isReturningFromDetails primero
+  const isReturningFromDetails = props.isReturningFromDetails || false;
+
+  // Pasar todos los props y isReturningFromDetails a ListTableInner
+  return (
+    <ListTableInner
+      {...props}
+      isReturningFromDetailsFlag={isReturningFromDetails}
+    />
+  );
+};
+
+// Componente interno que contiene toda la lógica
+const ListTableInner = ({
   students,
   page,
   isPreviousData,
@@ -25,7 +41,7 @@ const ListTable = ({
   lastVisible,
   setFirstVisible,
   setLastVisible,
-  isReturningFromDetails, // Nuevo prop
+  isReturningFromDetailsFlag = false,
 }) => {
   const resourceName = {
     singular: "alumno",
@@ -35,18 +51,18 @@ const ListTable = ({
   const { filteredStudents, isFiltering, queryValue, setQueryValue } =
     useFilterStudents({
       students,
-      setPage, // Pasar setPage para sincronizar estados
+      setPage,
     });
-
-  // Estado de carga combinado
-  // Si estamos volviendo de detalles, no mostrar spinner aunque esté cargando
-  const isLoading = (isFiltering || isPreviousData) && !isReturningFromDetails;
 
   const { selectedResources, allResourcesSelected, handleSelectionChange } =
     useIndexResourceState(filteredStudents);
   const navigate = useNavigate();
   const [taggedWith, setTaggedWith] = useState("");
   const [sortValue, setSortValue] = useState("today");
+
+  // Ahora podemos usar isReturningFromDetailsFlag de forma segura
+  const isLoading =
+    (isFiltering || isPreviousData) && !isReturningFromDetailsFlag;
 
   const handleTaggedWithChange = useCallback(
     (value) => setTaggedWith(value),
@@ -58,7 +74,9 @@ const ListTable = ({
   const handleRowClick = useCallback(
     (id) => {
       // Usar state para navegación para preservar el estado actual
-      console.log(`🔍 Navegando a detalles del alumno ${id} desde página ${page}`);
+      console.log(
+        `🔍 Navegando a detalles del alumno ${id} desde página ${page}`
+      );
       navigate(id, {
         state: {
           fromList: true,
@@ -152,9 +170,12 @@ const ListTable = ({
   // Mostrar un mensaje cuando detectamos paginación inválida
   const [paginationError, setPaginationError] = useState(false);
 
+  // Modificar el efecto que detecta páginas sin datos
   useEffect(() => {
     // Verificar si estamos retornando de detalles
-    const isReturningFromDetails = window.history.state?.usr?.fromList;
+    const isComingFromDetails =
+      window.history.state?.usr?.fromList || isReturningFromDetailsFlag;
+    const wasOffline = sessionStorage.getItem("wasOffline") === "true";
 
     // Resetear error de paginación cuando cambia la página
     setPaginationError(false);
@@ -165,38 +186,79 @@ const ListTable = ({
     // 3. Estamos cargando datos (esperar a que termine la carga)
     // 4. Se está realizando una búsqueda (no aplicamos paginación en ese caso)
     const isSearchActive = queryValue && queryValue.length > 0;
-    
-    if (!isReturningFromDetails && !isLoading && students.length === 0 && page > 1 && !isSearchActive) {
+
+    if (
+      !isComingFromDetails &&
+      !isLoading &&
+      students.length === 0 &&
+      page > 1 &&
+      !isSearchActive
+    ) {
       console.log("⚠️ Posible error de paginación: página sin datos");
       setPaginationError(true);
-      
-      // Intentar recuperación automática si es un error de paginación
+
+      // Estrategia de recuperación adaptada al contexto
       const attemptRecovery = () => {
         console.log("🔄 Intentando recuperación automática...");
-        
-        // Forzar recarga desde página 1
-        setPage(1);
-        setFirstVisible(null);
-        setLastVisible(null);
-        setPageAction(null);
+
+        // Si estuvimos offline recientemente, usar estrategia de reconstrucción más robusta
+        if (wasOffline) {
+          console.log(
+            "🔄 Detectada recuperación post-desconexión, usando reconstrucción robusta"
+          );
+
+          // Usar el método ensurePageCursors que hemos añadido
+          ensurePageCursors(Math.max(1, page - 1))
+            .then((success) => {
+              if (success) {
+                // Si funciona, volver a página anterior
+                setPageAction("previous");
+                setPage(page - 1);
+              } else {
+                // Si falla, volver a página 1
+                setPageAction(null);
+                setPage(1);
+              }
+            })
+            .catch(() => {
+              // En caso de error, volver a página 1
+              setPageAction(null);
+              setPage(1);
+            });
+        } else {
+          // En casos normales, simplemente intentar navegar a página anterior
+          setPage(Math.max(1, page - 1));
+          setFirstVisible(null);
+          setLastVisible(null);
+          setPageAction(null);
+        }
       };
-      
+
       // Dar tiempo para que otros efectos puedan resolver la situación
-      // antes de intentar la recuperación
       const recoveryTimer = setTimeout(attemptRecovery, 2000);
-      
+
       return () => clearTimeout(recoveryTimer);
     }
-  }, [page, isLoading, students.length, queryValue, setPage, setFirstVisible, setLastVisible, setPageAction]);
+  }, [
+    page,
+    isLoading,
+    students.length,
+    queryValue,
+    setPage,
+    setFirstVisible,
+    setLastVisible,
+    setPageAction,
+  ]);
 
   // Mensaje para cuando no hay resultados tras búsqueda
-  const emptyStateMarkup = queryValue && !isLoading ? (
-    <EmptySearchResult
-      title={`No se encontraron alumnos que coincidan con "${queryValue}"`}
-      description="Intenta cambiar los términos de búsqueda"
-      withIllustration
-    />
-  ) : null;
+  const emptyStateMarkup =
+    queryValue && !isLoading ? (
+      <EmptySearchResult
+        title={`No se encontraron alumnos que coincidan con "${queryValue}"`}
+        description="Intenta cambiar los términos de búsqueda"
+        withIllustration
+      />
+    ) : null;
 
   const table = (
     <div style={{ margin: "var(--p-space-4) 0" }}>
@@ -215,7 +277,8 @@ const ListTable = ({
             }}
           >
             <Text variant="bodyMd">
-              Ha ocurrido un problema al cargar esta página. Volviendo a la última página válida...
+              Ha ocurrido un problema al cargar esta página. Volviendo a la
+              última página válida...
             </Text>
             <div>
               <Spinner size="small" />
