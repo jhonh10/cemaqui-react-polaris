@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { Page, Layout, PageActions, LegacyCard } from "@shopify/polaris";
 import ModalConfirm from "../components/ModalConfirm";
-import { deleteStudent } from "../firebase/client";
+import { deleteStudent, restoreCursorsFromPagesInfo } from "../firebase/client";
 import { NotesCard } from "../components/studentDetails/NotesCard";
 import { DocumentIdCard } from "../components/studentDetails/DocumentIdCard";
 import { ContactInfoCard } from "../components/studentDetails/ContactInfoCard";
@@ -36,9 +36,9 @@ export const StudentDetails = ({ studentData }) => {
   // Verificar si la página actual es la última conocida
   const isLastPage = useMemo(() => {
     try {
-      const pagesInfo = JSON.parse(sessionStorage.getItem('pagesInfo') || '{}');
+      const pagesInfo = JSON.parse(sessionStorage.getItem("pagesInfo") || "{}");
       const pageData = pagesInfo[currentPage];
-      
+
       // Si esta página no tiene más páginas, es la última
       return pageData && pageData.hasMore === false;
     } catch (e) {
@@ -53,11 +53,14 @@ export const StudentDetails = ({ studentData }) => {
     if (!fromList) return backUrl;
 
     const params = new URLSearchParams();
+    
+    // Usar un valor por defecto (1) cuando currentPage es undefined
+    const pageToReturn = currentPage || 1;
 
     // Asegurarnos de que currentPage sea un número positivo
-    if (currentPage && currentPage > 1) {
-      console.log(`🔙 Regresando a la página ${currentPage}`);
-      params.set("page", currentPage.toString());
+    if (pageToReturn > 1) {
+      console.log(`🔙 Regresando a la página ${pageToReturn}`);
+      params.set("page", pageToReturn.toString());
     }
 
     if (currentQuery) {
@@ -72,26 +75,32 @@ export const StudentDetails = ({ studentData }) => {
     return backUrl;
   };
 
+  // Modificar handleBack
   const handleBack = () => {
+    // Manejar el caso donde currentPage es undefined
+    const pageToReturn = currentPage || 1;
+    
     const backUrl = getBackUrl();
-    console.log(`🔙 Volviendo a: ${backUrl}, página: ${currentPage || 1}`);
+    console.log(`🔙 Regresando a la página ${pageToReturn}`);
+
+    // ÚNICA llamada para guardar datos de retorno
+    sessionStorage.setItem("returning_from_details", "true");
+    sessionStorage.setItem("returning_to_page", pageToReturn.toString());
     
-    // Determinar la acción de paginación correcta para cuando volvamos
-    // Si estamos en la última página y volvemos a una página anterior,
-    // debemos usar pageAction="previous" en lugar de null
-    const pageAction = isLastPage && currentPage > 1 ? "previous" : null;
-    
+    // Asegurarnos de tener todos los cursores necesarios sin duplicar logs
+    restoreCursorsFromPagesInfo();
+
+    // Asegúrate de que estos indicadores lleguen a la página de destino
     navigate(backUrl, {
       state: {
         fromList: true,
-        currentPage: currentPage || 1,
-        pageAction,
+        currentPage: pageToReturn,
+        currentQuery,
+        returningFromDetails: true, // Añadir explícitamente
         timestamp: Date.now()
-      }
+      },
     });
   };
-
-  const backUrl = getBackUrl();
 
   const deleteStudentMutation = useMutation({
     mutationFn: deleteStudent,
@@ -121,24 +130,7 @@ export const StudentDetails = ({ studentData }) => {
   );
 
   return (
-    <Page
-      backAction={{
-        content: "Volver",
-        onAction: () =>
-          navigate(getBackUrl(), {
-            state: {
-              fromList: true,
-              returnToPage: currentPage,
-            },
-          }),
-      }}
-      title={`${firstname} ${lastname}`}
-      pagination={{
-        hasPrevious: true,
-        hasNext: true,
-      }}
-      subtitle="Alumno desde hace mas de 1 año"
-    >
+    <Page backAction={{ content: "Volver", onAction: handleBack }}>
       {modalPrompt}
       <Layout>
         <Layout.Section>
