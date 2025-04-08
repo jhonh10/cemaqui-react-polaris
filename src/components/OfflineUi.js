@@ -179,7 +179,6 @@ export const OfflineUI = () => {
     
     try {
       // 1. Limpiar completamente el caché y forzar recargar desde cero
-      await queryClient.resetQueries();
       
       // 2. Reestablecer sesión y estado global
       sessionStorage.setItem('lastNavigationTime', Date.now().toString());
