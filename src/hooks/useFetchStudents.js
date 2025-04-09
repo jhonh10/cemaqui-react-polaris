@@ -365,16 +365,35 @@ export const useFetchStudents = () => {
   const paginationQueryConfig = {
     queryKey: ["students", page, pageAction],
     queryFn: () => {
-      // Verificar retorno desde detalles y obtener página destino
+      // Obtener todas las banderas relevantes
       const isReturningFromSession = sessionStorage.getItem("returning_from_details") === "true";
       const forcePage = sessionStorage.getItem("force_page");
       const pageFromReturn = parseInt(sessionStorage.getItem("returning_to_page") || "1", 10);
       const shouldRefreshPageOne = sessionStorage.getItem("refresh_page_one") === "true";
       
-      // La página a usar será la primera que exista en este orden:
-      // 1. force_page (si existe)
-      // 2. returning_to_page (si estamos retornando desde detalles)
-      // 3. page (estado actual)
+      // NUEVO: Verificar si venimos de eliminar un alumno
+      const forceRefreshAfterDelete = sessionStorage.getItem("force_refresh_after_delete") === "true";
+      
+      // Si venimos de eliminar, limpiar la bandera inmediatamente para evitar loops
+      if (forceRefreshAfterDelete) {
+        console.log("🔄 Detectado retorno después de eliminar alumno, forzando datos frescos");
+        sessionStorage.removeItem("force_refresh_after_delete");
+        
+        // IMPORTANTE: No usar caché bajo ninguna circunstancia
+        
+        // Devolver una consulta fresca con cursores reiniciados para la página actual
+        return getStudents(
+          page,           // Usar la página actual
+          null,           // Sin acción específica
+          null,           // Forzar firstVisible a null
+          null,           // Forzar lastVisible a null
+          setFirstVisible,
+          setLastVisible,
+          true            // Forzar reconstrucción completa
+        );
+      }
+      
+      // Resto del código existente...
       let pageToUse = page;
       
       if (forcePage) {
@@ -385,7 +404,7 @@ export const useFetchStudents = () => {
       
       console.log(`🔍 Configurando consulta para página ${pageToUse}`);
       
-      // Buscar en las posibles claves de caché
+      // El resto de la función sigue igual...
       let cachedData = null;
       
       // Solo usar caché si no estamos forzando refresh para página 1
