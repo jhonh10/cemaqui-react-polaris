@@ -9,6 +9,7 @@ import {
   getCursorForPage,
   ensurePageCursors,
 } from "../firebase/client";
+import { useReturningNavigation } from './useReturningNavigation';
 
 // Constantes
 const CACHE_STALE_TIME = 5 * 60 * 1000; // 5 minutos
@@ -19,6 +20,9 @@ export const useFetchStudents = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const searchTerm = searchParams.get("query") || "";
+
+  // Usar el hook unificado
+  const { isReturningFromDetails } = useReturningNavigation();
 
   // Estados para paginación
   const [page, setPage] = useState(1);
@@ -78,24 +82,28 @@ export const useFetchStudents = () => {
     return undefined;
   }, [lastActivityTimestamp]);
 
-  // SOLUCIÓN: Al montar el componente, marcar como primer render
+  // Reemplazar el efecto de primer renderizado actual
   useEffect(() => {
-    // Este efecto se ejecuta solo una vez al montar
-    console.log("🔄 Primer renderizado detectado");
-
-    // Después de un breve tiempo, desactivar el flag de primer render
-    const timer = setTimeout(() => {
+    // Verificar inmediatamente si estamos volviendo desde detalles
+    const returningFromDetails = sessionStorage.getItem("returning_from_details") === "true";
+    
+    if (returningFromDetails) {
+      // Si estamos volviendo desde detalles, NO es un primer renderizado
+      console.log("⏭️ Omitiendo detección de primer renderizado debido a retorno desde detalles");
       setIsFirstRender(false);
-      console.log("✅ Finalizando estado de primer renderizado");
-    }, 100);
-
-    return () => clearTimeout(timer);
+    } else {
+      // Solo marcar como primer renderizado si genuinamente es la primera carga
+      console.log("🔄 Primer renderizado detectado");
+      
+      // Después de un breve tiempo, desactivar el flag
+      const timer = setTimeout(() => {
+        setIsFirstRender(false);
+        console.log("✅ Finalizando estado de primer renderizado");
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
   }, []);
-
-  // Actualizar lastActivityTimestamp cuando hay interacción
-  useEffect(() => {
-    setLastActivityTimestamp(Date.now());
-  }, [page, searchTerm, pageAction]);
 
   // Función para actualizar la URL con el número de página
   const updatePageInUrl = useCallback(
@@ -130,84 +138,67 @@ export const useFetchStudents = () => {
   const redirectToPage = useCallback(
     (targetPage) => {
       console.log(`🔀 Redirigiendo a página ${targetPage}`);
-      resetCursors();
+      
+      // Verificar si tenemos esta página en caché
+      const pageInCache = queryClient.getQueryData(["students", targetPage, null]);
+      const cursorExists = getCursorForPage(targetPage) !== null;
+      
+      if (pageInCache && cursorExists) {
+        console.log(`📝 Usando datos en caché para redirección a página ${targetPage}`);
+        sessionStorage.setItem("using_cached_page", "true");
+      } else {
+        resetCursors();
+      }
+      
       setPage(targetPage);
       updatePageInUrl(targetPage);
     },
-    [resetCursors, updatePageInUrl]
+    [resetCursors, updatePageInUrl, queryClient]
   );
 
-  // 1. Mejorar el efecto para detectar el retorno desde detalles
+  // Modificar el efecto que inicializa desde URL
   useEffect(() => {
-    if (!searchTerm && !initializedFromUrl) {
-      const pageParam = searchParams.get("page");
-
-      // Verificar si estamos regresando de la página de detalles
-      const returningFromDetails =
-        sessionStorage.getItem("returning_from_details") === "true";
-      const returningToPage = parseInt(
-        sessionStorage.getItem("returning_to_page") || "1",
-        10
-      );
-
-      if (returningFromDetails) {
-        console.log(
-          `🔙 Detectado retorno desde detalles a página ${returningToPage}`
-        );
-
-        // Limpiar indicadores
+    // Leer parámetros independientemente del estado de initializedFromUrl
+    const returningFromDetails = sessionStorage.getItem("returning_from_details") === "true";
+    const returningToPage = parseInt(sessionStorage.getItem("returning_to_page") || "1", 10);
+    const pageParam = searchParams.get("page");
+    
+    // Si estamos regresando de detalles, esto tiene prioridad absoluta
+    if (returningFromDetails) {
+      console.log(`🔙 Detectado retorno desde detalles a página ${returningToPage}`);
+      
+      // Forzar la página correcta
+      setPage(returningToPage); 
+      
+      // Marcar como inicializado para evitar otros efectos
+      setInitializedFromUrl(true);
+      setIsFirstRender(false);
+      
+      // Mantener el valor de "returning_from_details" hasta que la navegación esté completa
+      
+      // Actualizar URL explícitamente
+      const params = new URLSearchParams(searchParams);
+      params.set("page", returningToPage.toString());
+      setSearchParams(params);
+      
+      // Marcar uso de caché
+      sessionStorage.setItem("using_cached_page", "true");
+      
+      // Limpiar el indicador después de un momento para permitir que la navegación complete
+      setTimeout(() => {
         sessionStorage.removeItem("returning_from_details");
-
-        // IMPORTANTE: Marcar como inicializado ANTES de cambiar la página
-        setInitializedFromUrl(true);
-
-        // Configurar la página correctamente
-        setPage(returningToPage);
-
-        // Importante: Forzar sincronización con la URL para evitar reinicios
-        updatePageInUrl(returningToPage);
-
-        // CLAVE: Forzar isFirstRender a false inmediatamente
-        setIsFirstRender(false);
-
-        // Resto del código...
-      } else if (pageParam && !Number.isNaN(parseInt(pageParam, 10))) {
-        // Inicialización normal desde URL
-        const pageNumber = parseInt(pageParam, 10);
+      }, 500);
+    }
+    // Si no estamos retornando de detalles pero hay un param de página, inicializar desde URL
+    else if (!initializedFromUrl && pageParam && !searchTerm) {
+      const pageNumber = parseInt(pageParam, 10);
+      if (!Number.isNaN(pageNumber) && pageNumber > 0) {
         console.log(`📄 Configurando página inicial a ${pageNumber} desde URL`);
-
-        setInitializedFromUrl(true);
         setPage(pageNumber);
-
-        if (pageNumber > 1) {
-          // Verificar si tenemos cursores almacenados para esta página
-          const storedCursor = getCursorForPage(pageNumber);
-
-          if (!storedCursor) {
-            console.log(
-              `🔄 Reiniciando cursores para reconstruir la página ${pageNumber}`
-            );
-            resetCursors();
-          } else {
-            console.log(
-              `🔄 Usando cursores almacenados para página ${pageNumber}`
-            );
-
-            // Si es una página avanzada (>2), verificar que tenemos cursores intermedios
-            if (pageNumber > 2) {
-              ensurePageCursors(pageNumber - 1).catch((err) =>
-                console.error("Error verificando cursores intermedios:", err)
-              );
-            }
-          }
-        }
-      } else {
-        console.log("📄 No hay página en URL, estableciendo página 1");
         setInitializedFromUrl(true);
-        setPage(1);
       }
     }
-  }, [searchParams, searchTerm, resetCursors, initializedFromUrl, setPage, queryClient]);
+  }, [searchParams, setSearchParams, setPage, searchTerm]);
 
   // 2. Efecto para manejar cambios en término de búsqueda
   useEffect(() => {
@@ -218,14 +209,6 @@ export const useFetchStudents = () => {
       queryClient.invalidateQueries(["students", 1]);
     }
   }, [searchTerm, queryClient, page, resetCursors]);
-
-  // 3. Efecto para mantener caché al volver de detalles
-  useEffect(() => {
-    const navState = window.history.state?.usr;
-    if (navState?.fromList) {
-      console.log("🔄 Detectado retorno desde detalles, manteniendo caché");
-    }
-  }, [queryClient, page]); // Quitar resetCursors de las dependencias
 
   // Añadir un nuevo efecto para escuchar el evento appStateRestored
 
@@ -268,11 +251,22 @@ export const useFetchStudents = () => {
           await queryClient.fetchQuery(["students", 1, null]);
 
           // Reconstruir página por página (importante para mantener cursores secuenciales)
-          for (let i = 2; i <= targetPage; i += 1) {
-            console.log(`🔄 Reconstruyendo página ${i} de ${targetPage}`);
-            // eslint-disable-next-line no-await-in-loop
-            await queryClient.fetchQuery(["students", i, "next"]);
-          }
+          const pagesToRebuild = Array.from({ length: targetPage - 1 }, (_, idx) => idx + 2);
+          console.log(`🔄 Reconstruyendo páginas 2 a ${targetPage}`);
+
+          // Procesar en secuencia sin usar bucles con await
+          const processSequentially = async (pages) => {
+            if (pages.length === 0) return;
+            
+            const [currentPage, ...remainingPages] = pages;
+            console.log(`🔄 Reconstruyendo página ${currentPage} de ${targetPage}`);
+            await queryClient.fetchQuery(["students", currentPage, "next"]);
+            
+            // Llamada recursiva para el resto de páginas
+            return processSequentially(remainingPages);
+          };
+
+          await processSequentially(pagesToRebuild);
 
           // Limpiar bandera de reconstrucción
           sessionStorage.removeItem("sequentialRebuild");
@@ -300,6 +294,22 @@ export const useFetchStudents = () => {
     handleSequentialRebuild();
   }, [page, queryClient, resetCursors, navigate]);
 
+  // 1. Crear un efecto que detecte navegación entre páginas ya visitadas
+  useEffect(() => {
+    if (!isFirstRender && page > 0) {
+      // Comprobar si ya tenemos esta página en caché
+      const pageInCache = queryClient.getQueryData(["students", page, pageAction]);
+      const cursorExists = getCursorForPage(page) !== null;
+      
+      if (pageInCache && cursorExists) {
+        console.log(`📝 Página ${page} encontrada en caché, evitando nueva petición`);
+        
+        // Si existe en caché, marcar este efecto
+        sessionStorage.setItem("using_cached_page", "true");
+      }
+    }
+  }, [page, pageAction, queryClient, isFirstRender]);
+
   // Configuración de queries
   const searchQueryConfig = {
     queryKey: ["studentsSearch", searchTerm],
@@ -312,35 +322,47 @@ export const useFetchStudents = () => {
   const paginationQueryConfig = {
     queryKey: ["students", page, pageAction],
     queryFn: () => {
-      // Verificar si estamos volviendo de detalles
-      const isReturningFromDetails = window.history.state?.usr?.returningFromDetails;
-      const returningFromDetailsSession = sessionStorage.getItem("returning_from_details") === "true";
-
-      // IMPORTANTE: Obtener el valor real de la página destino
-      const actualPage = returningFromDetailsSession 
-        ? parseInt(sessionStorage.getItem("returning_to_page") || page.toString(), 10)
+      // Verificar si estamos regresando de detalles y obtener la página destino
+      const isReturningFromSession = sessionStorage.getItem("returning_from_details") === "true";
+      const pageToUse = isReturningFromSession 
+        ? parseInt(sessionStorage.getItem("returning_to_page") || String(page), 10)
         : page;
-
-      console.log(`🔍 Ejecutando consulta para página ${actualPage}, acción: ${pageAction || "normal"}`);
-
-      // Si el valor real es diferente del estado, usar el real
-      const pageToUse = actualPage !== page ? actualPage : page;
       
-      // Resto del código usando pageToUse en lugar de page
+      // Siempre consultar la página correcta, no necesariamente page (estado React)
+      console.log(`🔍 Configurando consulta para página ${pageToUse}`);
+      
+      // Resto del código verificando caché...
+      const possibleCacheKeys = [
+        ["students", pageToUse, null],
+        ["students", pageToUse, "next"],
+        ["students", pageToUse, "previous"]
+      ];
+      
+      // Buscar caché con la página correcta
+      const foundKey = possibleCacheKeys.find(key => queryClient.getQueryData(key));
+      const cachedData = foundKey ? queryClient.getQueryData(foundKey) : null;
+      
+      if (cachedData) {
+        console.log(`📝 Usando datos de caché para página ${pageToUse}`);
+        sessionStorage.setItem("using_cached_page", "true");
+        return Promise.resolve(cachedData);
+      }
+      
+      // Si no hay caché, ejecutar la consulta para la página correcta
+      console.log(`🔍 Ejecutando consulta para página ${pageToUse}`);
       return getStudents(
-        pageToUse,
+        pageToUse,  // Usar pageToUse, no page
         pageAction,
-        firstVisible,
+        firstVisible, 
         lastVisible,
         setFirstVisible,
         setLastVisible
       );
     },
-    enabled: searchTerm.length === 0,
-    refetchOnWindowFocus: false,
-    keepPreviousData: true,
     staleTime: CACHE_STALE_TIME,
     cacheTime: CACHE_TIME,
+    keepPreviousData: true,
+    refetchOnWindowFocus: false,
   };
 
   // Ejecutar queries
@@ -439,15 +461,17 @@ export const useFetchStudents = () => {
 
   // Efecto para detectar inactividad al cambiar de página
   useEffect(() => {
-    if (areCursorsProbablyStale()) {
-      console.log(
-        `🔄 Detectada inactividad prolongada al cambiar a página ${page}`
-      );
+    const usingCachedPage = sessionStorage.getItem("using_cached_page") === "true";
+    
+    if (areCursorsProbablyStale() && !usingCachedPage) {
+      console.log(`🔄 Detectada inactividad prolongada al cambiar a página ${page}`);
       console.log(`🧹 Limpiando caché y cursores para forzar recarga`);
 
       setFirstVisible(null);
       setLastVisible(null);
       queryClient.invalidateQueries(["students", page]);
+    } else if (areCursorsProbablyStale() && usingCachedPage) {
+      console.log(`📝 Usando caché a pesar de inactividad prolongada`);
     }
   }, [page, areCursorsProbablyStale, queryClient]);
 
