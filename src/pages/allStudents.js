@@ -49,6 +49,7 @@ export const AllStudents = ({
         setFirstVisible={setFirstVisible}
         setLastVisible={setLastVisible}
         isReturningFromDetails={isReturningFromDetails}
+        isLoading={isLoading} // Pasar isLoading desde useFetchStudents
       />
     </Page>
   );
