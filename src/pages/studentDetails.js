@@ -121,13 +121,65 @@ export const StudentDetails = ({ studentData }) => {
     });
   };
 
+  // Modificar la mutación de eliminación del estudiante
   const deleteStudentMutation = useMutation({
     mutationFn: deleteStudent,
     onSuccess: () => {
-      navigate("/admin/students");
+      // Asegurar que currentPage sea un número
+      const pageToReturn = parseInt(currentPage || "1", 10);
+      console.log(`🔙 Regresando a la página ${pageToReturn} después de eliminar alumno`);
+      
+      // Establecer los mismos indicadores que usamos al volver con el botón
+      sessionStorage.setItem("returning_from_details", "true");
+      sessionStorage.setItem("returning_to_page", pageToReturn.toString());
+      
+      // MODIFICACIÓN CLAVE: Añadir bandera específica para indicar que venimos de eliminar un alumno
+      sessionStorage.setItem("force_refresh_after_delete", "true");
+      
+      // Asegurarnos de tener todos los cursores necesarios
+      restoreCursorsFromPagesInfo();
+      
+      // Limpiar TODA la caché de la colección de estudiantes para forzar una carga fresca
+      try {
+        console.log("🧹 Limpiando caché completa para forzar datos frescos después de eliminar alumno");
+        
+        // Invalidar todas las consultas relacionadas con estudiantes
+        queryClient.removeQueries(["students"]);  // Esto elimina toda la caché de estudiantes
+        
+        // Si hay una página específica, asegurar que también se invalide específicamente
+        if (pageToReturn) {
+          queryClient.removeQueries(["students", pageToReturn, null]);
+          queryClient.removeQueries(["students", pageToReturn, "next"]);
+          queryClient.removeQueries(["students", pageToReturn, "previous"]);
+        }
+      } catch (e) {
+        console.error("No se pudo limpiar la caché después de eliminar alumno:", e);
+      }
+      
+      // Terminar la operación
       setLoading(false);
       setOpenModal(false);
+      
+      // Navegar de vuelta a la lista con el estado apropiado
+      const backUrl = getBackUrl();
+      navigate(backUrl, {
+        state: {
+          fromList: true,
+          currentPage: pageToReturn,
+          currentQuery,
+          returningFromDetails: true,
+          timestamp: Date.now(),
+          forceRefresh: true,        // Siempre forzar refresco después de eliminar
+          deletedStudent: true,      // Indicador adicional de que se eliminó un alumno
+          avoidCache: true           // Nuevo indicador para evitar caché
+        },
+      });
     },
+    onError: (error) => {
+      console.error("Error al eliminar alumno:", error);
+      setLoading(false);
+      // Mostrar alguna notificación de error aquí si es necesario
+    }
   });
 
   const handleDelete = async () => {
