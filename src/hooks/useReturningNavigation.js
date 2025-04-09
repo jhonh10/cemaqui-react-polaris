@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
 export const useReturningNavigation = () => {
   const location = useLocation();
   const [isReturningFromDetails, setIsReturningFromDetails] = useState(false);
+  const hasProcessedReturn = useRef(false); // Añadir una referencia para evitar detecciones duplicadas
   
   // Detectar el retorno desde página de detalles
   useEffect(() => {
@@ -12,8 +13,9 @@ export const useReturningNavigation = () => {
                                 window.history.state?.usr?.returningFromDetails;
     const isReturningFromSession = sessionStorage.getItem("returning_from_details") === "true";
     
-    if (isReturningFromState || isReturningFromSession) {
+    if ((isReturningFromState || isReturningFromSession) && !hasProcessedReturn.current) {
       console.log("🔙 Detectado retorno desde página de detalles");
+      hasProcessedReturn.current = true; // Marcar que ya procesamos este retorno
       setIsReturningFromDetails(true);
       
       // Limpiar el indicador en sessionStorage
@@ -28,7 +30,10 @@ export const useReturningNavigation = () => {
       return () => clearTimeout(timer);
     }
     
-    return undefined;
+    // Restablecer la referencia al desmontar o en cambios de ruta
+    return () => {
+      hasProcessedReturn.current = false;
+    };
   }, [location.state]);
   
   return { isReturningFromDetails };
