@@ -128,6 +128,22 @@ export const useFetchStudents = () => {
     }
   }, [isFirstRender]); // Añadir isFirstRender como dependencia para que el efecto se ejecute solo cuando cambie
 
+  // Agregar este efecto para detectar cuando volvemos desde detalles con página indefinida
+  useEffect(() => {
+    // Verificar si necesitamos refrescar la página 1
+    const shouldRefreshPageOne = sessionStorage.getItem("refresh_page_one") === "true";
+    
+    if (shouldRefreshPageOne && page === 1) {
+      console.log("🔄 Refrescando datos de página 1 después de volver desde detalles");
+      
+      // Invalidar la caché para página 1
+      queryClient.invalidateQueries(["students", 1, null]);
+      
+      // Limpiar el indicador para no repetir la operación
+      sessionStorage.removeItem("refresh_page_one");
+    }
+  }, [page, queryClient]);
+
   // Función para actualizar la URL con el número de página
   const updatePageInUrl = useCallback(
     (pageNumber) => {
@@ -353,6 +369,7 @@ export const useFetchStudents = () => {
       const isReturningFromSession = sessionStorage.getItem("returning_from_details") === "true";
       const forcePage = sessionStorage.getItem("force_page");
       const pageFromReturn = parseInt(sessionStorage.getItem("returning_to_page") || "1", 10);
+      const shouldRefreshPageOne = sessionStorage.getItem("refresh_page_one") === "true";
       
       // La página a usar será la primera que exista en este orden:
       // 1. force_page (si existe)
@@ -368,26 +385,29 @@ export const useFetchStudents = () => {
       
       console.log(`🔍 Configurando consulta para página ${pageToUse}`);
       
-      // Resto de la lógica con pageToUse...
-      const possibleCacheKeys = [
-        ["students", pageToUse, null],
-        ["students", pageToUse, "next"],
-        ["students", pageToUse, "previous"]
-      ];
-      
       // Buscar en las posibles claves de caché
       let cachedData = null;
-      for (let i = 0; i < possibleCacheKeys.length; i += 1) {
-        const key = possibleCacheKeys[i];
-        const data = queryClient.getQueryData(key);
-        if (data) {
-          cachedData = data;
-          break;
+      
+      // Solo usar caché si no estamos forzando refresh para página 1
+      if (!(pageToUse === 1 && shouldRefreshPageOne)) {
+        const possibleCacheKeys = [
+          ["students", pageToUse, null],
+          ["students", pageToUse, "next"],
+          ["students", pageToUse, "previous"]
+        ];
+        
+        for (let i = 0; i < possibleCacheKeys.length; i += 1) {
+          const key = possibleCacheKeys[i];
+          const data = queryClient.getQueryData(key);
+          if (data) {
+            cachedData = data;
+            break;
+          }
         }
       }
       
-      // Si hay caché, usarla
-      if (cachedData) {
+      // Si hay caché y no estamos forzando refresh, usarla
+      if (cachedData && !(pageToUse === 1 && shouldRefreshPageOne)) {
         console.log(`📝 Usando datos de caché para página ${pageToUse}`);
         
         // Si estamos en una página incorrecta, forzar la correcta
@@ -399,7 +419,33 @@ export const useFetchStudents = () => {
         return Promise.resolve(cachedData);
       }
       
-      // Si no hay caché, ejecutar consulta normal
+      // Verificar si necesitamos forzar una actualización de la página 1
+      const forceRefreshPageOne = sessionStorage.getItem("force_refresh_page_one") === "true";
+      
+      // Si estamos en página 1 y hay que forzar actualización, siempre ir al servidor
+      if (pageToUse === 1 && forceRefreshPageOne) {
+        console.log("🔄 Forzando consulta al servidor para página 1 (sin usar caché)");
+        sessionStorage.removeItem("force_refresh_page_one");
+        
+        // Ejecutar consulta fresca y guardar en caché
+        return getStudents(
+          pageToUse,
+          pageAction,
+          null, // forzar firstVisible a null
+          null, // forzar lastVisible a null
+          setFirstVisible,
+          setLastVisible,
+          true // forzar reconstrucción
+        );
+      }
+      
+      // Si estamos forzando refresh o no hay caché, obtener datos frescos
+      if (pageToUse === 1 && shouldRefreshPageOne) {
+        console.log("🔄 Forzando petición fresca para página 1");
+        sessionStorage.removeItem("refresh_page_one"); // Limpiar la bandera
+      }
+      
+      // Si no hay caché o estamos forzando refresh, ejecutar consulta normal
       return getStudents(
         pageToUse,
         pageAction,
