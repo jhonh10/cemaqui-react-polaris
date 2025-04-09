@@ -11,6 +11,7 @@ import {
 } from "@shopify/polaris";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useFilterStudents } from "../hooks/useFilterStudents";
 import ListTablePagination from "./ListTablePagination";
 import { ensurePageCursors } from "../firebase/client";
@@ -42,7 +43,11 @@ const ListTableInner = ({
   setFirstVisible,
   setLastVisible,
   isReturningFromDetailsFlag = false,
+  isLoading: propsIsLoading, // Recibir isLoading desde useFetchStudents
 }) => {
+  // Usar el hook directamente aquí
+  const queryClient = useQueryClient();
+
   const resourceName = {
     singular: "alumno",
     plural: "alumnos",
@@ -60,9 +65,17 @@ const ListTableInner = ({
   const [taggedWith, setTaggedWith] = useState("");
   const [sortValue, setSortValue] = useState("today");
 
-  // Ahora podemos usar isReturningFromDetailsFlag de forma segura
+  // CLAVE: Verificar caché de forma más robusta
+  const usingCache = sessionStorage.getItem("using_cached_page") === "true";
+  const isPageInMemory =
+    queryClient.getQueryData(["students", page, null]) !== undefined;
+
+  // Lógica más precisa para isLoading
   const isLoading =
-    (isFiltering || isPreviousData) && !isReturningFromDetailsFlag;
+    (((isFiltering || isPreviousData) && !isReturningFromDetailsFlag) ||
+      propsIsLoading) &&
+    !usingCache &&
+    !isPageInMemory;
 
   const handleTaggedWithChange = useCallback(
     (value) => setTaggedWith(value),
