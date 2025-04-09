@@ -3,7 +3,11 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Page, Layout, PageActions, LegacyCard } from "@shopify/polaris";
 import ModalConfirm from "../components/ModalConfirm";
-import { deleteStudent, restoreCursorsFromPagesInfo } from "../firebase/client";
+import {
+  deleteStudent,
+  restoreCursorsFromPagesInfo,
+  recalculateTotalPages,
+} from "../firebase/client";
 import { NotesCard } from "../components/studentDetails/NotesCard";
 import { DocumentIdCard } from "../components/studentDetails/DocumentIdCard";
 import { ContactInfoCard } from "../components/studentDetails/ContactInfoCard";
@@ -77,6 +81,29 @@ export const StudentDetails = ({ studentData }) => {
     return backUrl;
   };
 
+  // Nueva función auxiliar para construir la URL con la página correcta
+  const getBackUrlWithCorrectPage = (pageToReturn) => {
+    let backUrl = "/admin/students";
+
+    const params = new URLSearchParams();
+
+    // Asegurarnos de que pageToReturn sea un número positivo
+    if (pageToReturn > 1) {
+      params.set("page", pageToReturn.toString());
+    }
+
+    if (currentQuery) {
+      params.set("query", currentQuery);
+    }
+
+    const queryString = params.toString();
+    if (queryString) {
+      backUrl = `${backUrl}?${queryString}`;
+    }
+
+    return backUrl;
+  };
+
   // Modificar handleBack
   const handleBack = () => {
     // Asegurar que currentPage sea un número
@@ -124,62 +151,75 @@ export const StudentDetails = ({ studentData }) => {
   // Modificar la mutación de eliminación del estudiante
   const deleteStudentMutation = useMutation({
     mutationFn: deleteStudent,
-    onSuccess: () => {
-      // Asegurar que currentPage sea un número
-      const pageToReturn = parseInt(currentPage || "1", 10);
-      console.log(`🔙 Regresando a la página ${pageToReturn} después de eliminar alumno`);
-      
-      // Establecer los mismos indicadores que usamos al volver con el botón
-      sessionStorage.setItem("returning_from_details", "true");
-      sessionStorage.setItem("returning_to_page", pageToReturn.toString());
-      
-      // MODIFICACIÓN CLAVE: Añadir bandera específica para indicar que venimos de eliminar un alumno
-      sessionStorage.setItem("force_refresh_after_delete", "true");
-      
-      // Asegurarnos de tener todos los cursores necesarios
-      restoreCursorsFromPagesInfo();
-      
-      // Limpiar TODA la caché de la colección de estudiantes para forzar una carga fresca
+    onSuccess: async () => {
       try {
-        console.log("🧹 Limpiando caché completa para forzar datos frescos después de eliminar alumno");
-        
-        // Invalidar todas las consultas relacionadas con estudiantes
-        queryClient.removeQueries(["students"]);  // Esto elimina toda la caché de estudiantes
-        
-        // Si hay una página específica, asegurar que también se invalide específicamente
-        if (pageToReturn) {
-          queryClient.removeQueries(["students", pageToReturn, null]);
-          queryClient.removeQueries(["students", pageToReturn, "next"]);
-          queryClient.removeQueries(["students", pageToReturn, "previous"]);
+        // Obtener el resultado del recálculo que ya se hizo en deleteStudent()
+        // en lugar de volver a calcularlo
+        const newTotalPages = parseInt(sessionStorage.getItem("totalPages") || "1", 10);
+        console.log(
+          `📊 Recálculo después de eliminar: ahora hay ${newTotalPages} páginas totales`
+        );
+
+        // 2. Determinar la página a la que debemos regresar
+        let pageToReturn = parseInt(currentPage || "1", 10);
+
+        // 3. Verificar si la página original sigue existiendo
+        if (pageToReturn > newTotalPages) {
+          console.log(
+            `⚠️ La página ${pageToReturn} ya no existe después de eliminar. Ajustando a página ${newTotalPages}`
+          );
+          pageToReturn = Math.max(1, newTotalPages);
         }
+
+        // 4. Establecer los marcadores de navegación con la página CORRECTA
+        sessionStorage.setItem("returning_from_details", "true");
+        sessionStorage.setItem("returning_to_page", pageToReturn.toString());
+        sessionStorage.setItem("force_refresh_after_delete", "true");
+
+        // 5. Asegurarnos de tener todos los cursores necesarios
+        restoreCursorsFromPagesInfo();
+
+        // 6. Limpiar la caché para forzar datos frescos
+        console.log(
+          "🧹 Limpiando caché completa para forzar datos frescos después de eliminar alumno"
+        );
+        queryClient.removeQueries(["students"]);
+
+        // 7. Navegar directamente a la página correcta
+        const backUrl = getBackUrlWithCorrectPage(pageToReturn);
+
+        // Terminar la operación
+        setLoading(false);
+        setOpenModal(false);
+
+        // 8. Navegar con el estado actualizado
+        navigate(backUrl, {
+          state: {
+            fromList: true,
+            currentPage: pageToReturn, // Ya tenemos la página correcta
+            currentQuery,
+            returningFromDetails: true,
+            timestamp: Date.now(),
+            forceRefresh: true,
+            deletedStudent: true,
+            avoidCache: true,
+          },
+        });
       } catch (e) {
-        console.error("No se pudo limpiar la caché después de eliminar alumno:", e);
+        console.error("Error al procesar redirección post-eliminación:", e);
+        setLoading(false);
+
+        // Si falla la validación, volver a la página 1 para estar seguros
+        navigate("/admin/students", {
+          state: { deletedStudent: true, forceRefresh: true },
+        });
       }
-      
-      // Terminar la operación
-      setLoading(false);
-      setOpenModal(false);
-      
-      // Navegar de vuelta a la lista con el estado apropiado
-      const backUrl = getBackUrl();
-      navigate(backUrl, {
-        state: {
-          fromList: true,
-          currentPage: pageToReturn,
-          currentQuery,
-          returningFromDetails: true,
-          timestamp: Date.now(),
-          forceRefresh: true,        // Siempre forzar refresco después de eliminar
-          deletedStudent: true,      // Indicador adicional de que se eliminó un alumno
-          avoidCache: true           // Nuevo indicador para evitar caché
-        },
-      });
     },
     onError: (error) => {
       console.error("Error al eliminar alumno:", error);
       setLoading(false);
       // Mostrar alguna notificación de error aquí si es necesario
-    }
+    },
   });
 
   const handleDelete = async () => {
