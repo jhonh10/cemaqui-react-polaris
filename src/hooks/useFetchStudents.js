@@ -23,16 +23,39 @@ export const useFetchStudents = () => {
 
   // Usar el hook unificado
   const { isReturningFromDetails } = useReturningNavigation();
+  
+  // CAMBIO IMPORTANTE: Inicializar la página usando el valor de URL o sessionStorage
+  const initialPage = (() => {
+    // Si estamos volviendo de detalles, usar ese valor prioritariamente
+    if (sessionStorage.getItem("returning_from_details") === "true") {
+      const returningPage = parseInt(sessionStorage.getItem("returning_to_page") || "1", 10);
+      return returningPage;
+    }
+    
+    // Si hay un parámetro page en la URL, usarlo
+    const urlPage = searchParams.get("page");
+    if (urlPage && !Number.isNaN(parseInt(urlPage, 10))) {
+      return parseInt(urlPage, 10);
+    }
+    
+    // Valor por defecto
+    return 1;
+  })();
+  
+  // Inicializar con la página correcta desde el principio
+  const [page, setPage] = useState(initialPage);
+  
+  // Si estamos volviendo desde detalles, establecer isFirstRender a false inmediatamente
+  const [isFirstRender, setIsFirstRender] = useState(
+    sessionStorage.getItem("returning_from_details") !== "true"
+  );
 
-  // Estados para paginación
-  const [page, setPage] = useState(1);
   const [pageAction, setPageAction] = useState(null);
   const [firstVisible, setFirstVisible] = useState(null);
   const [lastVisible, setLastVisible] = useState(null);
   const [maxKnownPage, setMaxKnownPage] = useState(1);
 
   // Estados para control de carga
-  const [isFirstRender, setIsFirstRender] = useState(true);
   const [initializedFromUrl, setInitializedFromUrl] = useState(false);
 
   // Estado para rastrear la última actividad
@@ -82,7 +105,7 @@ export const useFetchStudents = () => {
     return undefined;
   }, [lastActivityTimestamp]);
 
-  // Reemplazar el efecto de primer renderizado actual
+  // Reemplazar el efecto de primer renderizado actual con esta implementación:
   useEffect(() => {
     // Verificar inmediatamente si estamos volviendo desde detalles
     const returningFromDetails = sessionStorage.getItem("returning_from_details") === "true";
@@ -91,7 +114,7 @@ export const useFetchStudents = () => {
       // Si estamos volviendo desde detalles, NO es un primer renderizado
       console.log("⏭️ Omitiendo detección de primer renderizado debido a retorno desde detalles");
       setIsFirstRender(false);
-    } else {
+    } else if (isFirstRender) { // Solo ejecutar esta parte si isFirstRender es true
       // Solo marcar como primer renderizado si genuinamente es la primera carga
       console.log("🔄 Primer renderizado detectado");
       
@@ -103,7 +126,7 @@ export const useFetchStudents = () => {
       
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [isFirstRender]); // Añadir isFirstRender como dependencia para que el efecto se ejecute solo cuando cambie
 
   // Función para actualizar la URL con el número de página
   const updatePageInUrl = useCallback(
@@ -156,49 +179,53 @@ export const useFetchStudents = () => {
     [resetCursors, updatePageInUrl, queryClient]
   );
 
-  // Modificar el efecto que inicializa desde URL
+  // Modificar el useEffect que gestiona la inicialización desde URL
   useEffect(() => {
-    // Leer parámetros independientemente del estado de initializedFromUrl
+    // Prioridad absoluta: Detectar retorno desde detalles
     const returningFromDetails = sessionStorage.getItem("returning_from_details") === "true";
-    const returningToPage = parseInt(sessionStorage.getItem("returning_to_page") || "1", 10);
-    const pageParam = searchParams.get("page");
     
-    // Si estamos regresando de detalles, esto tiene prioridad absoluta
     if (returningFromDetails) {
+      const returningToPage = parseInt(sessionStorage.getItem("returning_to_page") || "1", 10);
       console.log(`🔙 Detectado retorno desde detalles a página ${returningToPage}`);
       
-      // Forzar la página correcta
-      setPage(returningToPage); 
-      
-      // Marcar como inicializado para evitar otros efectos
+      // Establecer página inmediatamente (sin setTimeout)
+      setPage(returningToPage);
       setInitializedFromUrl(true);
       setIsFirstRender(false);
       
-      // Mantener el valor de "returning_from_details" hasta que la navegación esté completa
+      // IMPORTANTE: Forzar el uso de caché
+      sessionStorage.setItem("using_cached_page", "true");
       
-      // Actualizar URL explícitamente
+      // CLAVE: Marcar en sessionStorage qué página estamos cargando para la consulta inicial
+      sessionStorage.setItem("force_page", returningToPage.toString());
+      
+      // Limpiar el indicador después de un momento
+      setTimeout(() => {
+        sessionStorage.removeItem("returning_from_details");
+        sessionStorage.removeItem("force_page");
+      }, 500);
+      
+      // Actualizar URL para mantener coherencia
       const params = new URLSearchParams(searchParams);
       params.set("page", returningToPage.toString());
       setSearchParams(params);
       
-      // Marcar uso de caché
-      sessionStorage.setItem("using_cached_page", "true");
-      
-      // Limpiar el indicador después de un momento para permitir que la navegación complete
-      setTimeout(() => {
-        sessionStorage.removeItem("returning_from_details");
-      }, 500);
+      return; // Importante: salir temprano para no ejecutar el resto
     }
-    // Si no estamos retornando de detalles pero hay un param de página, inicializar desde URL
-    else if (!initializedFromUrl && pageParam && !searchTerm) {
-      const pageNumber = parseInt(pageParam, 10);
-      if (!Number.isNaN(pageNumber) && pageNumber > 0) {
-        console.log(`📄 Configurando página inicial a ${pageNumber} desde URL`);
-        setPage(pageNumber);
-        setInitializedFromUrl(true);
+    
+    // Resto de la lógica para inicialización desde URL...
+    if (!initializedFromUrl && !searchTerm) {
+      const pageParam = searchParams.get("page");
+      if (pageParam && !Number.isNaN(parseInt(pageParam, 10))) {
+        const pageNumber = parseInt(pageParam, 10);
+        if (pageNumber > 0) {
+          console.log(`📄 Configurando página inicial a ${pageNumber} desde URL`);
+          setPage(pageNumber);
+          setInitializedFromUrl(true);
+        }
       }
     }
-  }, [searchParams, setSearchParams, setPage, searchTerm]);
+  }, [searchParams, setSearchParams, searchTerm, initializedFromUrl, setPage]);
 
   // 2. Efecto para manejar cambios en término de búsqueda
   useEffect(() => {
@@ -322,38 +349,61 @@ export const useFetchStudents = () => {
   const paginationQueryConfig = {
     queryKey: ["students", page, pageAction],
     queryFn: () => {
-      // Verificar si estamos regresando de detalles y obtener la página destino
+      // Verificar retorno desde detalles y obtener página destino
       const isReturningFromSession = sessionStorage.getItem("returning_from_details") === "true";
-      const pageToUse = isReturningFromSession 
-        ? parseInt(sessionStorage.getItem("returning_to_page") || String(page), 10)
-        : page;
+      const forcePage = sessionStorage.getItem("force_page");
+      const pageFromReturn = parseInt(sessionStorage.getItem("returning_to_page") || "1", 10);
       
-      // Siempre consultar la página correcta, no necesariamente page (estado React)
+      // La página a usar será la primera que exista en este orden:
+      // 1. force_page (si existe)
+      // 2. returning_to_page (si estamos retornando desde detalles)
+      // 3. page (estado actual)
+      let pageToUse = page;
+      
+      if (forcePage) {
+        pageToUse = parseInt(forcePage, 10);
+      } else if (isReturningFromSession) {
+        pageToUse = pageFromReturn;
+      }
+      
       console.log(`🔍 Configurando consulta para página ${pageToUse}`);
       
-      // Resto del código verificando caché...
+      // Resto de la lógica con pageToUse...
       const possibleCacheKeys = [
         ["students", pageToUse, null],
         ["students", pageToUse, "next"],
         ["students", pageToUse, "previous"]
       ];
       
-      // Buscar caché con la página correcta
-      const foundKey = possibleCacheKeys.find(key => queryClient.getQueryData(key));
-      const cachedData = foundKey ? queryClient.getQueryData(foundKey) : null;
+      // Buscar en las posibles claves de caché
+      let cachedData = null;
+      for (let i = 0; i < possibleCacheKeys.length; i += 1) {
+        const key = possibleCacheKeys[i];
+        const data = queryClient.getQueryData(key);
+        if (data) {
+          cachedData = data;
+          break;
+        }
+      }
       
+      // Si hay caché, usarla
       if (cachedData) {
         console.log(`📝 Usando datos de caché para página ${pageToUse}`);
-        sessionStorage.setItem("using_cached_page", "true");
+        
+        // Si estamos en una página incorrecta, forzar la correcta
+        if (page !== pageToUse) {
+          console.log(`⚡ Corrigiendo página a ${pageToUse} desde ${page}`);
+          setTimeout(() => setPage(pageToUse), 0);
+        }
+        
         return Promise.resolve(cachedData);
       }
       
-      // Si no hay caché, ejecutar la consulta para la página correcta
-      console.log(`🔍 Ejecutando consulta para página ${pageToUse}`);
+      // Si no hay caché, ejecutar consulta normal
       return getStudents(
-        pageToUse,  // Usar pageToUse, no page
+        pageToUse,
         pageAction,
-        firstVisible, 
+        firstVisible,
         lastVisible,
         setFirstVisible,
         setLastVisible
