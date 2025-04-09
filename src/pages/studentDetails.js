@@ -59,7 +59,6 @@ export const StudentDetails = ({ studentData }) => {
 
     // Asegurarnos de que currentPage sea un número positivo
     if (pageToReturn > 1) {
-      console.log(`🔙 Regresando a la página ${pageToReturn}`);
       params.set("page", pageToReturn.toString());
     }
 
@@ -77,26 +76,26 @@ export const StudentDetails = ({ studentData }) => {
 
   // Modificar handleBack
   const handleBack = () => {
-    // Manejar el caso donde currentPage es undefined
-    const pageToReturn = currentPage || 1;
+    // Asegurar que currentPage sea un número
+    const pageToReturn = parseInt(currentPage || "1", 10);
     
     const backUrl = getBackUrl();
     console.log(`🔙 Regresando a la página ${pageToReturn}`);
 
-    // ÚNICA llamada para guardar datos de retorno
+    // ÚNICA llamada para guardar datos de retorno - VALOR EXACTO
     sessionStorage.setItem("returning_from_details", "true");
     sessionStorage.setItem("returning_to_page", pageToReturn.toString());
     
-    // Asegurarnos de tener todos los cursores necesarios sin duplicar logs
+    // Asegurarnos de tener todos los cursores necesarios
     restoreCursorsFromPagesInfo();
 
-    // Asegúrate de que estos indicadores lleguen a la página de destino
+    // Usar state para transmitir información de navegación
     navigate(backUrl, {
       state: {
         fromList: true,
-        currentPage: pageToReturn,
+        currentPage: pageToReturn, // Asegurarse que sea un número
         currentQuery,
-        returningFromDetails: true, // Añadir explícitamente
+        returningFromDetails: true,
         timestamp: Date.now()
       },
     });
