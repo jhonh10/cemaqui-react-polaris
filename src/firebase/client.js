@@ -403,7 +403,7 @@ export async function getStudents(
         // Redireccionamos a una página segura
         return {
           studentList: [],
-          hasMore: false,
+          hasMore: true,
           redirectToPage: Math.max(1, page - 1),
         };
       }
@@ -634,24 +634,83 @@ export async function getStudentById(studentId) {
 }
 
 export async function addStudent(values) {
-  const docRef = await addDoc(collection(db, "Alumnos"), {
-    ...values,
-    expeditionDate: Timestamp.fromDate(new Date()),
-    courses: [
-      {
-        name: values.course,
-        date: Timestamp.fromDate(new Date()),
-        status: "Vigente",
-      },
-    ],
-  });
-  return docRef.id;
+  try {
+    // 1. Guardar información de páginas antes de añadir
+    const prevTotalPages = parseInt(sessionStorage.getItem("totalPages") || "0", 10);
+    
+    // 2. Añadir el documento
+    const docRef = await addDoc(collection(db, "Alumnos"), {
+      ...values,
+      expeditionDate: Timestamp.fromDate(new Date()),
+      courses: [
+        {
+          name: values.course,
+          date: Timestamp.fromDate(new Date()),
+          status: "Vigente",
+        },
+      ],
+    });
+    
+    // 3. Recalcular páginas
+    const { totalPages: newTotalPages } = await recalculateTotalPages();
+    
+    // 4. Detectar cambios estructurales
+    if (newTotalPages !== prevTotalPages) {
+      console.log(`📈 Cambio en estructura de paginación: de ${prevTotalPages} a ${newTotalPages} páginas`);
+      
+      // 5. Marcar para reconstrucción
+      sessionStorage.setItem("pagination_structure_changed", "true");
+      
+      // 6. Invalidar caché solo de la última página
+      if (prevTotalPages > 0) {
+        // Invalidar la última página anterior y la nueva última página si son diferentes
+        sessionStorage.removeItem(`firebase_cursors.${prevTotalPages}`);
+        if (newTotalPages > prevTotalPages) {
+          sessionStorage.removeItem(`firebase_cursors.${newTotalPages}`);
+        }
+      }
+    }
+    
+    return docRef.id;
+  } catch (error) {
+    console.error("Error añadiendo estudiante:", error);
+    throw error;
+  }
 }
 
 export async function deleteStudent(id, loading = () => {}) {
   loading(true);
-  await deleteDoc(doc(db, "Alumnos", id));
-  loading(false);
+  
+  try {
+    // 1. Guardar información de la página actual antes de eliminar
+    const currentPageInfo = JSON.parse(sessionStorage.getItem("pagesInfo") || "{}");
+    const currentTotalPages = parseInt(sessionStorage.getItem("totalPages") || "0", 10);
+    
+    // 2. Ejecutar la eliminación
+    await deleteDoc(doc(db, "Alumnos", id));
+    
+    // 3. Recalcular páginas después de eliminar
+    const { totalPages: newTotalPages } = await recalculateTotalPages();
+    
+    // 4. Detectar si la estructura de paginación ha cambiado
+    if (newTotalPages !== currentTotalPages) {
+      console.log(`⚠️ Cambio estructural detectado: de ${currentTotalPages} a ${newTotalPages} páginas`);
+      
+      // 5. Marcar que necesitamos una reconstrucción completa de paginación
+      sessionStorage.setItem("pagination_structure_changed", "true");
+      sessionStorage.setItem("force_pagination_rebuild", "true");
+      
+      // 6. Limpiar caches que podrían tener información desactualizada
+      clearAllCursors();
+      sessionStorage.removeItem("pagesInfo");
+    }
+    
+    loading(false);
+  } catch (error) {
+    console.error("Error eliminando estudiante:", error);
+    loading(false);
+    throw error;
+  }
 }
 
 export async function updateStudentData({ docId, data = {} }) {
@@ -826,5 +885,40 @@ const restoreCursorsFromPagesInfo = () => {
     return false;
   }
 };
+
 // Exportar la función de restauración de cursores
 export { restoreCursorsFromPagesInfo };
+
+// Añadir esta nueva función
+export const recalculateTotalPages = async (pageSize = 20) => {
+  try {
+    console.log("🔄 Recalculando número total de páginas...");
+    
+    // Consulta para contar documentos (más eficiente que obtenerlos todos)
+    const countQuery = query(
+      collection(db, "Alumnos"),
+      orderBy("expeditionDate", "desc")
+    );
+    
+    // En Firestore no hay una función count() directa, pero podemos usar una consulta
+    // que solo obtenga los IDs para ser más eficiente
+    const snapshot = await getDocs(countQuery.withConverter({
+      fromFirestore: doc => ({ id: doc.id }),
+      toFirestore: () => ({})
+    }));
+    
+    const totalDocs = snapshot.size;
+    const totalPages = Math.ceil(totalDocs / pageSize);
+    
+    console.log(`📊 Recuento actualizado: ${totalDocs} alumnos, ${totalPages} páginas`);
+    
+    // Guardar esta información para que esté disponible en toda la aplicación
+    sessionStorage.setItem("totalStudents", totalDocs.toString());
+    sessionStorage.setItem("totalPages", totalPages.toString());
+    
+    return { totalDocs, totalPages };
+  } catch (error) {
+    console.error("Error al recalcular páginas:", error);
+    return { totalDocs: 0, totalPages: 0 };
+  }
+};
