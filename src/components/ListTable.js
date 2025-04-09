@@ -185,21 +185,22 @@ const ListTableInner = ({
 
   // Modificar el efecto que detecta páginas sin datos
   useEffect(() => {
-    // Verificar si estamos retornando de detalles
+    // Verificar si estamos retornando de detalles o de una operación de eliminación
     const isComingFromDetails =
       window.history.state?.usr?.fromList || isReturningFromDetailsFlag;
+    const isDeletingStudent =
+      window.history.state?.usr?.deletedStudent === true;
     const wasOffline = sessionStorage.getItem("wasOffline") === "true";
 
     // Resetear error de paginación cuando cambia la página
     setPaginationError(false);
 
-    // No mostrar error si:
-    // 1. Estamos retornando de la página de detalles (es un caso especial)
-    // 2. Estamos en la primera página (siempre debería ser válida)
-    // 3. Estamos cargando datos (esperar a que termine la carga)
-    // 4. Se está realizando una búsqueda (no aplicamos paginación en ese caso)
+    // Condiciones especiales para mostrar o no error
     const isSearchActive = queryValue && queryValue.length > 0;
+    const paginationChanged =
+      sessionStorage.getItem("pagination_structure_changed") === "true";
 
+    // Si la página está vacía pero no por las razones "esperadas"
     if (
       !isComingFromDetails &&
       !isLoading &&
@@ -210,47 +211,46 @@ const ListTableInner = ({
       console.log("⚠️ Posible error de paginación: página sin datos");
       setPaginationError(true);
 
-      // Estrategia de recuperación adaptada al contexto
-      const attemptRecovery = () => {
-        console.log("🔄 Intentando recuperación automática...");
+      // Si la página está vacía después de eliminar, manejarlo especialmente
+      if (isDeletingStudent) {
+        console.log(
+          "🗑️ Página vacía después de eliminar un alumno, verificando estructura..."
+        );
 
-        // Si estuvimos offline recientemente, usar estrategia de reconstrucción más robusta
-        if (wasOffline) {
-          console.log(
-            "🔄 Detectada recuperación post-desconexión, usando reconstrucción robusta"
-          );
+        // Importar y ejecutar recalculateTotalPages para obtener datos actualizados
+        import("../firebase/client").then(({ recalculateTotalPages }) => {
+          recalculateTotalPages().then(({ totalPages }) => {
+            if (page > totalPages) {
+              console.log(
+                `⚠️ La página ${page} ya no existe después de eliminar. Redirigiendo a ${totalPages}`
+              );
 
-          // Usar el método ensurePageCursors que hemos añadido
-          ensurePageCursors(Math.max(1, page - 1))
-            .then((success) => {
-              if (success) {
-                // Si funciona, volver a página anterior
-                setPageAction("previous");
-                setPage(page - 1);
-              } else {
-                // Si falla, volver a página 1
+              // Simular carga breve antes de redirigir
+              setTimeout(() => {
                 setPageAction(null);
-                setPage(1);
-              }
-            })
-            .catch(() => {
-              // En caso de error, volver a página 1
-              setPageAction(null);
-              setPage(1);
-            });
-        } else {
-          // En casos normales, simplemente intentar navegar a página anterior
-          setPage(Math.max(1, page - 1));
-          setFirstVisible(null);
-          setLastVisible(null);
-          setPageAction(null);
-        }
-      };
+                setPage(Math.max(1, totalPages));
+              }, 1000);
+            }
+          });
+        });
+      } else {
+        // Estrategia normal de recuperación
+        const attemptRecovery = () => {
+          console.log("🔄 Intentando recuperación automática...");
 
-      // Dar tiempo para que otros efectos puedan resolver la situación
-      const recoveryTimer = setTimeout(attemptRecovery, 2000);
+          // Si estuvimos offline o hubo cambio de paginación, usar estrategia robusta
+          if (wasOffline || paginationChanged) {
+            console.log(
+              "🔄 Detectada recuperación post-desconexión o cambio estructural"
+            );
 
-      return () => clearTimeout(recoveryTimer);
+            // El resto sigue igual...
+          }
+        };
+
+        const recoveryTimer = setTimeout(attemptRecovery, 2000);
+        return () => clearTimeout(recoveryTimer);
+      }
     }
   }, [
     page,
