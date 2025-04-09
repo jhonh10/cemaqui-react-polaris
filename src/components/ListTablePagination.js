@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Button, HorizontalStack, Text, TextField } from "@shopify/polaris";
+import { Button, HorizontalStack, Text } from "@shopify/polaris";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import InactivitySimulator from "./InactivitySimulator";
 import {
@@ -302,26 +302,6 @@ const ListTablePagination = ({
         >
           Anterior
         </Button>
-
-        {/* Añadir interfaz de selección directa de página */}
-        <TextField
-          type="number"
-          value={page.toString()}
-          min="1"
-          max={maxKnownPage || page + 5}
-          onChange={(value) => {
-            const newPage = parseInt(value, 10);
-            if (!Number.isNaN(newPage) && newPage > 0) {
-              handlePageChange(newPage);
-            }
-          }}
-          autoComplete="off"
-          connectedRight={
-            <Button onClick={() => handlePageChange(parseInt(page, 10))}>
-              Ir
-            </Button>
-          }
-        />
 
         <Button
           onClick={handleNextPage}
