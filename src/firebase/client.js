@@ -26,7 +26,7 @@ const firebaseConfig = JSON.parse(process.env.REACT_APP_FIREBASE_CONFIG);
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+export const db = getFirestore(app);
 
 export const formatDate = (date, locale, options) =>
   new Intl.DateTimeFormat(locale, options).format(date);
