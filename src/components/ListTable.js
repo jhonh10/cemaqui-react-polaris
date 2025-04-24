@@ -44,6 +44,7 @@ const ListTableInner = ({
   setLastVisible,
   isReturningFromDetailsFlag = false,
   isLoading: propsIsLoading, // Recibir isLoading desde useFetchStudents
+  isFetching = false, // Añadir esta prop con un valor por defecto
 }) => {
   // Usar el hook directamente aquí
   const queryClient = useQueryClient();
@@ -159,6 +160,7 @@ const ListTableInner = ({
     return filteredStudents;
   }, [filteredStudents, sortValue]);
 
+  // Modificar la línea donde se construye rowMarkup
   const rowMarkup = sortedAndFilteredStudents.map(
     ({ id, firstname, lastname, documentId, resolution, createdAt }, index) => (
       <IndexTable.Row
@@ -322,17 +324,35 @@ const ListTableInner = ({
           </div>
         </div>
 
-        {isLoading && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              padding: "32px",
-            }}
-          >
-            <Spinner size="large" color="teal" />
-          </div>
-        )}
+        {(() => {
+          if (isLoading && students.length === 0) {
+            // Spinner a pantalla completa durante la carga inicial
+            return (
+              <div style={{ display: "flex", justifyContent: "center", padding: "32px" }}>
+                <Spinner size="large" color="teal" />
+              </div>
+            );
+          } 
+          
+          if (isFetching && students.length > 0) {
+            // Para recargas, mostrar un indicador sutil en la parte superior
+            return (
+              <div style={{ 
+                position: "absolute", 
+                top: 0, 
+                left: 0, 
+                right: 0, 
+                height: "3px", 
+                backgroundColor: "var(--p-action-primary)",
+                opacity: 0.6,
+                zIndex: 1000,
+                animation: "loading-bar 1s infinite linear"
+              }} />
+            );
+          }
+          
+          return null;
+        })()}
 
         {!isLoading && sortedAndFilteredStudents.length === 0 ? (
           <div style={{ padding: "24px" }}>
