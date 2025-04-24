@@ -10,9 +10,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       {/* Mover AppProvider aquí para que envuelva todo, incluso el OfflineUI */}
       <AppProvider i18n={translations}>
-        <AppContainer>
-          <Router />
-        </AppContainer>
+        <Router />
       </AppProvider>
     </QueryClientProvider>
   );
