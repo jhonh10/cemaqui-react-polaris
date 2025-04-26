@@ -6,7 +6,6 @@ import {
   getDoc,
   getDocs,
   getFirestore,
-  initializeFirestore,
   limit,
   orderBy,
   query,
@@ -123,29 +122,41 @@ export function useFirestorePagination() {
     const init = async () => {
       const { pageIndex: urlIndex, cursorIds } = parseQuery(location.search);
 
-      if (cursorIds.length === 0) {
-        const restored = await restoreFromLocalStorage();
-        setCursorDocs(restored.cursorDocs);
-        fetchPage(restored.pageIndex, restored.cursorDocs);
+      let cursorDocsFromUrl = [];
+      if (cursorIds.length > 0) {
+        const fetchedDocs = await Promise.all(
+          cursorIds.map((id) => getDoc(doc(db, COLLECTION, id)))
+        );
+        cursorDocsFromUrl = fetchedDocs.filter((d) => d.exists());
+      }
+
+      // Verificar si los cursores del URL siguen siendo válidos
+      const urlCursorIds = cursorDocsFromUrl.map((d) => d.id);
+      const urlNeedsReset =
+        cursorIds.length !== urlCursorIds.length ||
+        cursorIds.some((id, i) => id !== urlCursorIds[i]);
+
+      let safeIndex = urlIndex;
+      if (safeIndex > cursorDocsFromUrl.length) {
+        safeIndex = cursorDocsFromUrl.length;
+      }
+
+      if (urlNeedsReset || safeIndex >= cursorDocsFromUrl.length + 1) {
+        console.warn("Detectada inconsistencia, reseteando paginación...");
+        localStorage.removeItem("paginationState");
+        navigate({ search: "" }, { replace: true });
+        setCursorDocs([]);
+        setPageIndex(0);
+        fetchPage(0, []);
         return;
       }
 
-      const docs = await Promise.all(
-        cursorIds.map((id) => getDoc(doc(db, COLLECTION, id)))
-      );
-      const valid = docs.filter((d) => d.exists());
-
-      let safeIndex = urlIndex;
-      if (safeIndex > valid.length) {
-        safeIndex = valid.length;
-      }
-
-      setCursorDocs(valid);
-      fetchPage(safeIndex, valid);
+      setCursorDocs(cursorDocsFromUrl);
+      fetchPage(safeIndex, cursorDocsFromUrl);
     };
 
     init();
-  }, []); // Montaje inicial
+  }, []);
 
   const nextPage = () => {
     fetchPage(pageIndex + 1, cursorDocs);
