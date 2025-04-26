@@ -1,16 +1,18 @@
 import { useEffect, useState, useCallback } from "react";
-import { initializeApp } from "firebase/app";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
-  getFirestore,
   collection,
   doc,
   getDoc,
   getDocs,
-  query,
-  orderBy,
-  startAfter,
+  getFirestore,
+  initializeFirestore,
   limit,
+  orderBy,
+  query,
+  startAfter,
 } from "firebase/firestore";
+import { initializeApp } from "firebase/app";
 
 const firebaseConfig = JSON.parse(process.env.REACT_APP_FIREBASE_CONFIG);
 const app = initializeApp(firebaseConfig);
@@ -19,72 +21,65 @@ const db = getFirestore(app);
 const PAGE_SIZE = 10;
 const COLLECTION = "Alumnos";
 
+function parseQuery(search) {
+  const params = new URLSearchParams(search);
+  const page = parseInt(params.get("page") || "0", 10);
+  const cursors = params.get("cursors")?.split(",").filter(Boolean) || [];
+  return { pageIndex: page, cursorIds: cursors };
+}
+
+function stringifyQuery(pageIndex, cursorIds) {
+  const params = new URLSearchParams();
+  params.set("page", pageIndex.toString());
+  if (cursorIds.length > 0) {
+    params.set("cursors", cursorIds.join(","));
+  }
+  return `?${params.toString()}`;
+}
+
 export function useFirestorePagination() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [docs, setDocs] = useState([]);
-  const [currentPageIndex, setCurrentPageIndex] = useState(0);
-  const [cursors, setCursors] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [cursorDocs, setCursorDocs] = useState([]);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPrevPage, setHasPrevPage] = useState(false);
 
-  const saveState = useCallback((index, cursorDocs) => {
-    const validCursors = cursorDocs.slice(0, index + 1).filter(Boolean);
-    localStorage.setItem(
-      "paginationState",
-      JSON.stringify({
-        currentPageIndex: index,
-        cursorIds: validCursors.map((doc) => doc.id),
-      })
+  const updateUrl = useCallback(
+    (index, cursorList) => {
+      const cursorIds = cursorList.map((d) => d.id);
+      const queryStr = stringifyQuery(index, cursorIds);
+      navigate({ search: queryStr }, { replace: true });
+      localStorage.setItem(
+        "paginationState",
+        JSON.stringify({ index, cursorIds })
+      );
+    },
+    [navigate]
+  );
+
+  const restoreFromLocalStorage = useCallback(async () => {
+    const stored = JSON.parse(localStorage.getItem("paginationState"));
+    if (!stored) return { pageIndex: 0, cursorDocs: [] };
+
+    const docs = await Promise.all(
+      stored.cursorIds.map((id) => getDoc(doc(db, COLLECTION, id)))
     );
-  }, []);
+    const valid = docs.filter((d) => d.exists());
 
-  const restoreState = useCallback(async () => {
-    setLoading(true);
-    try {
-      const saved = JSON.parse(localStorage.getItem("paginationState"));
-      if (!saved) return;
-
-      const cursorDocs = await Promise.all(
-        saved.cursorIds.map((id) => getDoc(doc(db, COLLECTION, id)))
-      );
-      const validCursors = cursorDocs.filter((doc) => doc.exists());
-
-      let safeIndex;
-      if (validCursors.length < saved.cursorIds.length) {
-        console.warn("Algunos cursores faltan. Restaurando desde la última página válida.");
-        safeIndex = validCursors.length;
-        if (safeIndex > 0) safeIndex -= 1;
-      } else {
-        safeIndex = saved.currentPageIndex;
-      }
-
-      setCursors(validCursors);
-      setCurrentPageIndex(safeIndex);
-
-      let q = query(
-        collection(db, COLLECTION),
-        orderBy("expeditionDate", "desc"),
-        limit(PAGE_SIZE + 1)
-      );
-
-      if (safeIndex > 0 && validCursors[safeIndex - 1]) {
-        q = query(q, startAfter(validCursors[safeIndex - 1]));
-      }
-
-      const snapshot = await getDocs(q);
-      const fetchedDocs = snapshot.docs.slice(0, PAGE_SIZE);
-      setDocs(fetchedDocs);
-      setHasNextPage(snapshot.docs.length > PAGE_SIZE);
-      setHasPrevPage(safeIndex > 0);
-    } catch (error) {
-      console.error("Error al restaurar el estado:", error);
-    } finally {
-      setLoading(false);
+    let safeIndex = stored.index;
+    if (safeIndex > valid.length) {
+      safeIndex = valid.length;
     }
+
+    return { pageIndex: safeIndex, cursorDocs: valid };
   }, []);
 
-  const loadPage = useCallback(
-    async (direction = "init") => {
+  const fetchPage = useCallback(
+    async (index, cursors) => {
       setLoading(true);
       try {
         let baseQuery = query(
@@ -93,92 +88,82 @@ export function useFirestorePagination() {
           limit(PAGE_SIZE + 1)
         );
 
-        const newCursors = [...cursors];
-        let newIndex = currentPageIndex;
-
-        if (direction === "init") {
-          const snapshot = await getDocs(baseQuery);
-          const docsForPage = snapshot.docs.slice(0, PAGE_SIZE);
-          setDocs(docsForPage);
-          setCurrentPageIndex(0);
-          setCursors([snapshot.docs[PAGE_SIZE - 1]]);
-          setHasNextPage(snapshot.docs.length > PAGE_SIZE);
-          setHasPrevPage(false);
-          saveState(0, [snapshot.docs[PAGE_SIZE - 1]]);
+        if (index > 0 && cursors[index - 1]) {
+          baseQuery = query(baseQuery, startAfter(cursors[index - 1]));
         }
 
-        if (direction === "next") {
-          if (cursors[currentPageIndex]) {
-            baseQuery = query(baseQuery, startAfter(cursors[currentPageIndex]));
-          }
+        const snapshot = await getDocs(baseQuery);
+        const pageDocs = snapshot.docs.slice(0, PAGE_SIZE);
+        const nextCursor = snapshot.docs[PAGE_SIZE];
 
-          const snapshot = await getDocs(baseQuery);
-          const docsForPage = snapshot.docs.slice(0, PAGE_SIZE);
+        setDocs(pageDocs);
+        setPageIndex(index);
+        setHasNextPage(snapshot.docs.length > PAGE_SIZE);
+        setHasPrevPage(index > 0);
 
-          newIndex = currentPageIndex + 1;
-          if (snapshot.docs.length > PAGE_SIZE) {
-            newCursors[newIndex] = snapshot.docs[PAGE_SIZE - 1];
-          }
-
-          setDocs(docsForPage);
-          setCurrentPageIndex(newIndex);
-          setCursors(newCursors);
-          setHasNextPage(snapshot.docs.length > PAGE_SIZE);
-          setHasPrevPage(newIndex > 0);
-          saveState(newIndex, newCursors);
+        const updatedCursors = [...cursors];
+        if (nextCursor && index === cursors.length) {
+          updatedCursors.push(snapshot.docs[PAGE_SIZE - 1]);
+          setCursorDocs(updatedCursors);
+          updateUrl(index, updatedCursors);
+        } else {
+          setCursorDocs(updatedCursors);
+          updateUrl(index, updatedCursors);
         }
-
-        if (direction === "prev") {
-          if (currentPageIndex === 0) return;
-
-          newIndex = currentPageIndex - 1;
-
-          let prevQuery = query(
-            collection(db, COLLECTION),
-            orderBy("expeditionDate", "desc"),
-            limit(PAGE_SIZE + 1)
-          );
-
-          if (newIndex > 0 && newCursors[newIndex - 1]) {
-            prevQuery = query(prevQuery, startAfter(newCursors[newIndex - 1]));
-          }
-
-          const snapshot = await getDocs(prevQuery);
-          const docsForPage = snapshot.docs.slice(0, PAGE_SIZE);
-
-          setDocs(docsForPage);
-          setCurrentPageIndex(newIndex);
-          setCursors(newCursors);
-          setHasNextPage(true);
-          setHasPrevPage(newIndex > 0);
-          saveState(newIndex, newCursors);
-        }
-      } catch (error) {
-        console.error("Error cargando página:", error);
+      } catch (e) {
+        console.error("Error fetching page:", e);
       } finally {
         setLoading(false);
       }
     },
-    [cursors, currentPageIndex, saveState]
+    [updateUrl]
   );
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("paginationState"));
-    if (saved) {
-      restoreState();
-    } else {
-      loadPage("init");
+    const init = async () => {
+      const { pageIndex: urlIndex, cursorIds } = parseQuery(location.search);
+
+      if (cursorIds.length === 0) {
+        const restored = await restoreFromLocalStorage();
+        setCursorDocs(restored.cursorDocs);
+        fetchPage(restored.pageIndex, restored.cursorDocs);
+        return;
+      }
+
+      const docs = await Promise.all(
+        cursorIds.map((id) => getDoc(doc(db, COLLECTION, id)))
+      );
+      const valid = docs.filter((d) => d.exists());
+
+      let safeIndex = urlIndex;
+      if (safeIndex > valid.length) {
+        safeIndex = valid.length;
+      }
+
+      setCursorDocs(valid);
+      fetchPage(safeIndex, valid);
+    };
+
+    init();
+  }, []); // Montaje inicial
+
+  const nextPage = () => {
+    fetchPage(pageIndex + 1, cursorDocs);
+  };
+
+  const prevPage = () => {
+    if (pageIndex > 0) {
+      fetchPage(pageIndex - 1, cursorDocs);
     }
-  }, []);
+  };
 
   return {
     docs,
     loading,
-    currentPageIndex,
+    pageIndex,
     hasNextPage,
     hasPrevPage,
-    nextPage: () => loadPage("next"),
-    prevPage: () => loadPage("prev"),
-    refresh: () => loadPage("init"),
+    nextPage,
+    prevPage,
   };
 }
