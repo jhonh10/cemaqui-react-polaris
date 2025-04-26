@@ -28,11 +28,12 @@ export function useFirestorePagination() {
   const [hasPrevPage, setHasPrevPage] = useState(false);
 
   const saveState = useCallback((index, cursorDocs) => {
+    const validCursors = cursorDocs.slice(0, index + 1).filter(Boolean);
     localStorage.setItem(
       "paginationState",
       JSON.stringify({
         currentPageIndex: index,
-        cursorIds: cursorDocs.map((doc) => doc.id),
+        cursorIds: validCursors.map((doc) => doc.id),
       })
     );
   }, []);
@@ -46,29 +47,35 @@ export function useFirestorePagination() {
       const cursorDocs = await Promise.all(
         saved.cursorIds.map((id) => getDoc(doc(db, COLLECTION, id)))
       );
-
       const validCursors = cursorDocs.filter((doc) => doc.exists());
+
+      let safeIndex;
+      if (validCursors.length < saved.cursorIds.length) {
+        console.warn("Algunos cursores faltan. Restaurando desde la última página válida.");
+        safeIndex = validCursors.length;
+        if (safeIndex > 0) safeIndex -= 1;
+      } else {
+        safeIndex = saved.currentPageIndex;
+      }
+
       setCursors(validCursors);
-      setCurrentPageIndex(saved.currentPageIndex);
+      setCurrentPageIndex(safeIndex);
 
       let q = query(
         collection(db, COLLECTION),
         orderBy("expeditionDate", "desc"),
-        limit(PAGE_SIZE + 1) // solicitamos uno más para saber si hay siguiente
+        limit(PAGE_SIZE + 1)
       );
 
-      if (
-        saved.currentPageIndex > 0 &&
-        validCursors[saved.currentPageIndex - 1]
-      ) {
-        q = query(q, startAfter(validCursors[saved.currentPageIndex - 1]));
+      if (safeIndex > 0 && validCursors[safeIndex - 1]) {
+        q = query(q, startAfter(validCursors[safeIndex - 1]));
       }
 
       const snapshot = await getDocs(q);
       const fetchedDocs = snapshot.docs.slice(0, PAGE_SIZE);
       setDocs(fetchedDocs);
       setHasNextPage(snapshot.docs.length > PAGE_SIZE);
-      setHasPrevPage(saved.currentPageIndex > 0);
+      setHasPrevPage(safeIndex > 0);
     } catch (error) {
       console.error("Error al restaurar el estado:", error);
     } finally {
@@ -89,42 +96,9 @@ export function useFirestorePagination() {
         const newCursors = [...cursors];
         let newIndex = currentPageIndex;
 
-        const handleEmptyPage = async (indexToTry) => {
-          if (indexToTry <= 0) return;
-
-          let fallbackQuery = query(
-            collection(db, COLLECTION),
-            orderBy("expeditionDate", "desc"),
-            limit(PAGE_SIZE + 1)
-          );
-
-          if (indexToTry > 1 && newCursors[indexToTry - 2]) {
-            fallbackQuery = query(
-              fallbackQuery,
-              startAfter(newCursors[indexToTry - 2])
-            );
-          }
-
-          const fallbackSnap = await getDocs(fallbackQuery);
-          const fallbackDocs = fallbackSnap.docs.slice(0, PAGE_SIZE);
-
-          setDocs(fallbackDocs);
-          setCurrentPageIndex(indexToTry - 1);
-          setCursors(newCursors);
-          setHasNextPage(fallbackSnap.docs.length > PAGE_SIZE);
-          setHasPrevPage(indexToTry - 1 > 0);
-          saveState(indexToTry - 1, newCursors);
-        };
-
         if (direction === "init") {
           const snapshot = await getDocs(baseQuery);
           const docsForPage = snapshot.docs.slice(0, PAGE_SIZE);
-
-          if (docsForPage.length === 0) {
-            await handleEmptyPage(currentPageIndex);
-            return;
-          }
-
           setDocs(docsForPage);
           setCurrentPageIndex(0);
           setCursors([snapshot.docs[PAGE_SIZE - 1]]);
@@ -141,26 +115,21 @@ export function useFirestorePagination() {
           const snapshot = await getDocs(baseQuery);
           const docsForPage = snapshot.docs.slice(0, PAGE_SIZE);
 
-          if (docsForPage.length === 0) {
-            await handleEmptyPage(currentPageIndex + 1);
-            return;
+          newIndex = currentPageIndex + 1;
+          if (snapshot.docs.length > PAGE_SIZE) {
+            newCursors[newIndex] = snapshot.docs[PAGE_SIZE - 1];
           }
 
-          newIndex = currentPageIndex + 1;
-          newCursors[newIndex] = snapshot.docs[PAGE_SIZE - 1];
           setDocs(docsForPage);
           setCurrentPageIndex(newIndex);
           setCursors(newCursors);
           setHasNextPage(snapshot.docs.length > PAGE_SIZE);
-          setHasPrevPage(true);
+          setHasPrevPage(newIndex > 0);
           saveState(newIndex, newCursors);
         }
 
         if (direction === "prev") {
-          if (currentPageIndex === 0) {
-            setLoading(false);
-            return;
-          }
+          if (currentPageIndex === 0) return;
 
           newIndex = currentPageIndex - 1;
 
@@ -176,11 +145,6 @@ export function useFirestorePagination() {
 
           const snapshot = await getDocs(prevQuery);
           const docsForPage = snapshot.docs.slice(0, PAGE_SIZE);
-
-          if (docsForPage.length === 0) {
-            await handleEmptyPage(newIndex);
-            return;
-          }
 
           setDocs(docsForPage);
           setCurrentPageIndex(newIndex);
