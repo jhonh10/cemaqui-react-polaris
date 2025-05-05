@@ -13,6 +13,7 @@ import Home from "./pages/home";
 import NewStudent from "./pages/newStudent";
 import AllStudentsFlag from "./pages/allStudentsFlag";
 import LayoutPage from "./layout/layoutPage";
+import StudentsListRQ from "./pages/StudentsListRQ";
 
 // Componente Link personalizado
 const IS_EXTERNAL_LINK_REGEX = /^(?:[a-z][a-z\d+.-]*:|\/\/)/;
@@ -39,6 +40,7 @@ export default function Router() {
   const router = createBrowserRouter(
     createRoutesFromElements(
       <Route path="/admin" element={<LayoutPage />}>
+        <Route path="rq" element={<StudentsListRQ />} />
         <Route index element={<Home />} />
         <Route path="students" element={<AllStudentsFlag />} />
         <Route path="students/:studentId" element={<StudentFlag />} />
@@ -46,7 +48,7 @@ export default function Router() {
       </Route>
     )
   );
-  
+
   // Ya no es necesario envolver el RouterProvider con AppProvider
   // porque ahora lo hacemos en App.js
   return <RouterProvider router={router} />;
